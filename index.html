@@ -1,0 +1,439 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0b1020">
+  <meta name="description" content="无账号、无聊天记录、无文件服务器的浏览器点对点传输工具。">
+  <title>DirectDrop · 点对点传输</title>
+  <style>
+    :root{color-scheme:dark;--bg:#0b1020;--panel:#111a2e;--panel2:#0e1628;--line:#26344f;--muted:#91a0bb;--text:#eef4ff;--mint:#72f3c3;--blue:#7ba7ff;--pink:#ff8db8;--danger:#ff8791;--shadow:0 24px 80px #0005}
+    *{box-sizing:border-box}html{min-height:100%;background:var(--bg)}body{margin:0;color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans SC","Microsoft YaHei",sans-serif;background:radial-gradient(ellipse at 8% -10%,#1f3b5b 0,transparent 38%),radial-gradient(ellipse at 100% 15%,#39234b 0,transparent 30%),var(--bg);min-height:100vh}
+    button,input,textarea{font:inherit}button{cursor:pointer}button:disabled{opacity:.42;cursor:not-allowed;filter:saturate(.4)}
+    .shell{max-width:1160px;margin:0 auto;padding:28px 22px 48px}.topbar{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-bottom:34px}.brand{display:flex;align-items:center;gap:13px}.mark{width:46px;height:46px;border-radius:15px;background:linear-gradient(140deg,var(--mint),#63a7ff);display:grid;place-items:center;box-shadow:0 8px 30px #72f3c333;color:#081321;font-weight:950;font-size:23px}.brand-name{font-weight:850;letter-spacing:.04em;font-size:18px}.brand-sub{font-size:12px;color:var(--muted);margin-top:3px}.top-tags{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}.tag{font-size:11px;border:1px solid var(--line);border-radius:999px;padding:7px 10px;color:#cad5e9;background:#10192a}.tag.good{border-color:#2d6d5a;color:var(--mint)}
+    .hero{display:grid;grid-template-columns:1.2fr .8fr;gap:22px;align-items:stretch;margin-bottom:22px}.hero-main,.hero-side,.card{border:1px solid var(--line);border-radius:24px;background:linear-gradient(145deg,#131e33f2,#0d1526f2);box-shadow:var(--shadow)}.hero-main{padding:30px 30px 28px;position:relative;overflow:hidden}.hero-main:after{content:"";position:absolute;width:270px;height:270px;border-radius:50%;right:-110px;top:-120px;border:1px solid #72f3c31f;box-shadow:0 0 0 28px #72f3c308,0 0 0 56px #72f3c305;pointer-events:none}.eyebrow{color:var(--mint);text-transform:uppercase;font-size:11px;letter-spacing:.18em;font-weight:800}.hero h1{font-size:clamp(30px,4vw,48px);line-height:1.13;margin:13px 0 14px;letter-spacing:-.04em}.hero h1 span{color:var(--mint)}.hero p{max-width:600px;color:#a9b7ce;line-height:1.75;font-size:14px;margin:0}.hero-side{padding:23px;display:flex;flex-direction:column;justify-content:space-between;gap:24px}.status-title{display:flex;align-items:center;justify-content:space-between;color:#b8c5dc;font-size:12px}.dot{width:8px;height:8px;border-radius:50%;background:#6b7893;display:inline-block;margin-right:8px}.dot.online{background:var(--mint);box-shadow:0 0 15px #72f3c377}.connection-state{font-size:23px;font-weight:800;letter-spacing:-.02em;margin-top:12px}.state-desc{color:var(--muted);font-size:12px;line-height:1.7;margin-top:7px}.meter{height:6px;background:#202b42;border-radius:99px;overflow:hidden;margin-top:18px}.meter span{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--mint),var(--blue));transition:width .2s;border-radius:99px}.mini-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.mini{background:#0c1424;border:1px solid #23314b;border-radius:14px;padding:12px}.mini strong{display:block;font-size:17px}.mini small{font-size:11px;color:var(--muted)}
+    .layout{display:grid;grid-template-columns:1fr 1fr;gap:22px;align-items:start}.card{padding:24px;min-width:0}.card-head{display:flex;align-items:flex-start;gap:13px;margin-bottom:19px}.step{flex:0 0 37px;height:37px;border-radius:12px;display:grid;place-items:center;font-size:13px;font-weight:900;color:#07131e;background:var(--mint)}.step.blue{background:var(--blue)}h2{font-size:19px;margin:1px 0 5px;letter-spacing:-.02em}.sub{font-size:12px;color:var(--muted);line-height:1.65}.field{margin:15px 0}.field-label{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:12px;color:#cbd7ea;font-weight:700;margin-bottom:8px}.hint{font-size:11px;color:var(--muted);font-weight:400}.input,textarea{display:block;width:100%;border:1px solid #2a3955;border-radius:13px;background:#091120;color:var(--text);padding:12px 13px;outline:none;transition:border .15s,box-shadow .15s}.input:focus,textarea:focus{border-color:#72f3c3a8;box-shadow:0 0 0 3px #72f3c316}textarea{resize:vertical;min-height:92px;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:11px;line-height:1.5;overflow-wrap:anywhere}.file-input{padding:12px;border:1px dashed #3b4d6b;border-radius:14px;background:#0c1526;width:100%;color:#becae0;font-size:12px}.file-list{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}.file-chip{font-size:11px;background:#1b2940;border:1px solid #31415e;padding:6px 8px;border-radius:8px;color:#ced9eb;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:11px}.btn{border:1px solid #344461;border-radius:12px;background:#1a2840;color:#eef4ff;padding:10px 14px;font-size:12px;font-weight:800;transition:transform .15s,filter .15s,border .15s}.btn:hover:not(:disabled){transform:translateY(-1px);filter:brightness(1.12)}.btn.primary{background:linear-gradient(135deg,#7cf3c3,#76b6ff);border:0;color:#071623;box-shadow:0 8px 24px #6be4c31c}.btn.blue{background:linear-gradient(135deg,#9abaff,#a9a0ff);border:0;color:#0c1428}.btn.small{padding:8px 11px}.divider{height:1px;background:#26334c;margin:20px 0}.notice{display:flex;gap:10px;border:1px solid #344360;background:#101c30;border-radius:13px;padding:12px;color:#b7c5dc;font-size:11px;line-height:1.65;margin-top:15px}.notice .icon{font-size:16px}.checkrow{display:flex;align-items:flex-start;gap:9px;font-size:12px;color:#b7c5dc;line-height:1.6}.checkrow input{accent-color:var(--mint);margin-top:3px}.security{border:1px solid #315a50;background:#0d211f;border-radius:15px;padding:14px 15px;margin-top:14px}.security .label{font-size:11px;color:#9ebbad}.security-code{font-size:20px;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;letter-spacing:.15em;color:var(--mint);font-weight:900;margin-top:5px}.security small{display:block;color:#a1b6ae;font-size:11px;line-height:1.55;margin-top:5px}.progress-wrap{margin-top:15px;padding:13px;border:1px solid #2b3953;background:#0a1221;border-radius:13px}.progress-label{display:flex;justify-content:space-between;gap:10px;color:#c7d3e6;font-size:11px;margin-bottom:8px}.progress{display:block;width:100%;height:7px;accent-color:var(--mint);border:0;border-radius:99px;overflow:hidden}.progress::-webkit-progress-bar{background:#25324a}.progress::-webkit-progress-value{background:linear-gradient(90deg,var(--mint),var(--blue));border-radius:99px}.progress::-moz-progress-bar{background:linear-gradient(90deg,var(--mint),var(--blue))}
+    .bottom-grid{display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-top:22px}.received-list,.message-list{display:flex;flex-direction:column;gap:9px;margin-top:14px}.empty{border:1px dashed #2c3a54;color:#7585a1;border-radius:13px;text-align:center;padding:20px 12px;font-size:12px;line-height:1.6}.received-item,.message-item{border:1px solid #293954;background:#0c1526;border-radius:13px;padding:12px;min-width:0}.received-title{font-size:12px;font-weight:800;overflow-wrap:anywhere}.received-meta{color:var(--muted);font-size:11px;margin-top:5px;overflow-wrap:anywhere}.download-link{display:inline-block;color:var(--mint);font-size:11px;font-weight:800;text-decoration:none;margin-top:9px;border-bottom:1px solid #72f3c355;padding-bottom:2px}.message-top{font-size:10px;color:#8392ad;margin-bottom:6px}.message-body{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.6;font-size:12px;color:#e2e9f6;max-height:260px;overflow:auto}.text-compose{min-height:86px}.foot{display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px;color:#6f7e99;font-size:11px;line-height:1.7;margin-top:25px;padding:0 4px}.foot a{color:#8ea4c8;text-decoration:none}.toast{position:fixed;bottom:20px;left:50%;transform:translate(-50%,20px);opacity:0;pointer-events:none;background:#eafff7;color:#071b15;border-radius:12px;padding:11px 16px;font-size:12px;font-weight:800;box-shadow:0 12px 35px #0006;transition:all .2s;z-index:5;max-width:calc(100vw - 32px)}.toast.show{opacity:1;transform:translate(-50%,0)}
+    @media(max-width:800px){.hero,.layout,.bottom-grid{grid-template-columns:1fr}.shell{padding:18px 13px 34px}.topbar{align-items:flex-start;flex-direction:column;margin-bottom:21px}.top-tags{justify-content:flex-start}.hero-main{padding:24px}.hero-side{padding:19px}.card{padding:19px}.hero h1{font-size:34px}}
+    @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header class="topbar">
+      <div class="brand"><div class="mark">↗</div><div><div class="brand-name">DIRECTDROP</div><div class="brand-sub">PRIVATE · PEER TO PEER · NO HISTORY</div></div></div>
+      <div class="top-tags"><span class="tag good">● 无文件服务器</span><span class="tag">纯静态网页</span><span class="tag">不保存聊天记录</span></div>
+    </header>
+
+    <section class="hero">
+      <div class="hero-main"><div class="eyebrow">Direct connection utility</div><h1>你的文件，<span>直接抵达。</span></h1><p>在两台设备的浏览器之间建立加密 WebRTC 通道，发送文件或文本。网页不需要账号、数据库或自建后端；连接码由你自己交换，传输内容不经过本网站的服务器。</p></div>
+      <aside class="hero-side">
+        <div><div class="status-title"><span><i id="stateDot" class="dot"></i>连接状态</span><span id="transportLabel">等待配对</span></div><div id="connectionState" class="connection-state">尚未连接</div><div id="connectionDesc" class="state-desc">先由一台设备生成邀请，再在另一台设备上生成回复。</div><div class="meter"><span id="connectionMeter"></span></div></div>
+        <div class="mini-grid"><div class="mini"><strong>端到端</strong><small>WebRTC DTLS 加密</small></div><div class="mini"><strong>零持久化</strong><small>刷新后清空页面数据</small></div></div>
+      </aside>
+    </section>
+
+    <main class="layout">
+      <section class="card">
+        <div class="card-head"><div class="step">01</div><div><h2>发起连接</h2><div class="sub">在发送端生成邀请；收到回复后粘贴回来。</div></div></div>
+        <div class="field"><label class="checkrow"><input id="stunToggle" type="checkbox" checked><span><strong>启用公共 STUN（推荐）</strong><br><span class="hint">仅协助双方发现可用网络地址，不中转文件。关闭后通常只适合局域网或网络允许直连的场景。</span></span></label></div>
+        <div class="actions"><button id="createOfferBtn" class="btn primary">✦ 生成连接邀请</button><button id="copyOfferBtn" class="btn" disabled>复制邀请</button></div>
+        <div class="field"><div class="field-label"><span>连接邀请码（发送给接收端）</span><span class="hint">SDP / ICE</span></div><textarea id="offerOut" spellcheck="false" readonly placeholder="点击“生成连接邀请”后，这里会出现一段连接码。"></textarea></div>
+        <div class="divider"></div>
+        <div class="field"><div class="field-label"><span>接收端回复码</span></div><textarea id="answerIn" spellcheck="false" placeholder="把另一台设备生成的回复码粘贴在这里……"></textarea></div>
+        <div class="actions"><button id="applyAnswerBtn" class="btn blue" disabled>确认回复并连接</button><button id="resetBtn" class="btn">重置连接</button></div>
+        <div class="security"><div class="label">连接安全校验码 · 双方应显示相同</div><div id="safetyCode" class="security-code">等待建立连接</div><small>连接建立后，通过电话或其他可信渠道核对两端校验码。相同可降低连接码被替换或遭中间人冒充的风险。</small></div>
+      </section>
+
+      <section class="card">
+        <div class="card-head"><div class="step blue">02</div><div><h2>接收连接</h2><div class="sub">粘贴发送端的邀请码，生成回复并发回给发送端。</div></div></div>
+        <div class="field"><div class="field-label"><span>发送端连接邀请码</span></div><textarea id="offerIn" spellcheck="false" placeholder="把第一台设备生成的连接邀请粘贴在这里……"></textarea></div>
+        <div class="actions"><button id="createAnswerBtn" class="btn blue">生成回复码</button><button id="copyAnswerBtn" class="btn" disabled>复制回复</button></div>
+        <div class="field"><div class="field-label"><span>回复码（发回给发送端）</span></div><textarea id="answerOut" spellcheck="false" readonly placeholder="点击“生成回复码”后，这里会出现回复码。"></textarea></div>
+        <div class="divider"></div>
+        <div class="field"><div class="field-label"><span>大文件保存位置</span><span class="hint">桌面版 Chrome / Edge</span></div><div class="sub">可选：提前选择文件夹，接收的文件会直接写入磁盘，避免把整个大文件都留在内存里。</div><div class="actions"><button id="chooseFolderBtn" class="btn small">选择保存文件夹</button><span id="folderState" class="hint" style="align-self:center">未选择，使用浏览器下载</span></div></div>
+        <div class="notice"><span class="icon">ⓘ</span><span>这不是自动发现设备的 LocalSend：为避免信令后端，连接码需要手动复制粘贴。文件数据在 WebRTC 通道中直接传输；不使用 TURN 中继，因此某些公司网络、校园网或严格 NAT 环境可能无法建立连接。</span></div>
+      </section>
+    </main>
+
+    <section class="bottom-grid">
+      <section class="card">
+        <div class="card-head"><div class="step">03</div><div><h2>发送文件</h2><div class="sub">可一次选择多个文件；传输分块进行，并等待接收端确认。</div></div></div>
+        <div class="field"><input id="fileInput" class="file-input" type="file" multiple><div id="fileList" class="file-list"></div></div>
+        <div class="actions"><button id="sendFilesBtn" class="btn primary" disabled>发送选中文件</button></div>
+        <div class="progress-wrap"><div class="progress-label"><span id="progressText">等待传输</span><span id="progressPct">0%</span></div><progress id="progressBar" class="progress" max="100" value="0"></progress></div>
+      </section>
+      <section class="card">
+        <div class="card-head"><div class="step blue">04</div><div><h2>发送文本</h2><div class="sub">发短文本、链接或代码片段；内容只在当前页面临时显示。</div></div></div>
+        <div class="field"><textarea id="textInput" class="text-compose" placeholder="输入要直接发给另一台设备的文本……"></textarea></div>
+        <div class="actions"><button id="sendTextBtn" class="btn blue" disabled>发送文本 ↗</button></div>
+      </section>
+    </section>
+
+    <section class="bottom-grid">
+      <section class="card"><div class="card-head"><div class="step">↓</div><div><h2>接收文件</h2><div class="sub">文件只保留在当前浏览器内存或你自己选择的文件夹中。</div></div></div><div id="receivedFiles" class="received-list"><div class="empty">还没有收到文件<br>连接成功后，接收到的文件会显示在这里。</div></div></section>
+      <section class="card"><div class="card-head"><div class="step blue">↔</div><div><h2>临时文本</h2><div class="sub">不写入数据库、不使用 localStorage；页面刷新后清空。</div></div><div style="margin-left:auto"><button id="clearMessagesBtn" class="btn small">清空</button></div></div><div id="messageList" class="message-list"><div class="empty">这里不会保留历史记录。</div></div></section>
+    </section>
+    <footer class="foot"><span>DIRECTDROP · 单文件静态应用 · 无分析脚本 / 无第三方 JS 库</span><span>需要 HTTPS 或 localhost · 文件内容不经过网站服务器</span></footer>
+  </div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<script>
+(() => {
+  'use strict';
+  const CHUNK_SIZE = 64 * 1024;
+  const WINDOW_CHUNKS = 8;
+  const ACK_TIMEOUT_MS = 120000;
+  const $ = id => document.getElementById(id);
+  let pc = null;
+  let channel = null;
+  let receiveQueue = Promise.resolve();
+  let receivingFile = null;
+  let directoryHandle = null;
+  let isSendingFiles = false;
+  let toastTimer = null;
+  const ackWaiters = new Map();
+  const completionWaiters = new Map();
+  const objectUrls = new Set();
+
+  function toast(message) {
+    const el = $('toast'); el.textContent = message; el.classList.add('show');
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove('show'), 3000);
+  }
+  function setConnection(state, description, connected = false) {
+    $('connectionState').textContent = state;
+    $('connectionDesc').textContent = description;
+    $('stateDot').classList.toggle('online', connected);
+    $('connectionMeter').style.width = connected ? '100%' : (state.includes('配对') || state.includes('连接中') ? '56%' : '0%');
+    $('transportLabel').textContent = connected ? 'DataChannel 已打开' : '等待配对';
+    updateControls();
+  }
+  function updateControls() {
+    const open = !!channel && channel.readyState === 'open';
+    $('sendFilesBtn').disabled = !open || isSendingFiles || !$('fileInput').files.length;
+    $('sendTextBtn').disabled = !open || isSendingFiles || !$('textInput').value.trim();
+    $('applyAnswerBtn').disabled = !pc || pc.signalingState !== 'have-local-offer' || !$('answerIn').value.trim();
+  }
+  function setProgress(label, pct) {
+    const val = Math.max(0, Math.min(100, Number(pct) || 0));
+    $('progressText').textContent = label; $('progressPct').textContent = `${Math.round(val)}%`; $('progressBar').value = val;
+  }
+  function bytesHuman(n) {
+    if (!Number.isFinite(n) || n < 0) return '—';
+    if (n < 1024) return `${n} B`;
+    const units = ['KB','MB','GB','TB']; let v = n / 1024, i = 0;
+    while (v >= 1024 && i < units.length - 1) { v /= 1024; i++; }
+    return `${v.toFixed(v >= 100 ? 0 : v >= 10 ? 1 : 2)} ${units[i]}`;
+  }
+  function randId() {
+    return (crypto.randomUUID ? crypto.randomUUID() : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`);
+  }
+  function safeName(name) {
+    const cleaned = String(name || 'received-file').replace(/[\\/\0-\x1f\x7f]/g, '_').replace(/^\.+$/, 'file').slice(0, 240);
+    return cleaned || 'received-file';
+  }
+  function clearWaiters(map, error) {
+    for (const [, item] of map) {
+      if (item.timer) clearTimeout(item.timer);
+      item.reject(error);
+    }
+    map.clear();
+  }
+  function waitForAck(id, seq) {
+    const key = `${id}:${seq}`;
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => { ackWaiters.delete(key); reject(new Error('等待接收端确认超时。请检查连接是否中断。')); }, ACK_TIMEOUT_MS);
+      ackWaiters.set(key, { resolve: () => { clearTimeout(timer); ackWaiters.delete(key); resolve(); }, reject: err => { clearTimeout(timer); ackWaiters.delete(key); reject(err); }, timer });
+    });
+  }
+  function waitForCompletion(id) {
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => { completionWaiters.delete(id); reject(new Error('接收端没有及时完成文件保存。')); }, ACK_TIMEOUT_MS);
+      completionWaiters.set(id, { resolve: value => { clearTimeout(timer); completionWaiters.delete(id); resolve(value); }, reject: err => { clearTimeout(timer); completionWaiters.delete(id); reject(err); }, timer });
+    });
+  }
+  function sendControl(obj) {
+    if (!channel || channel.readyState !== 'open') throw new Error('连接尚未打开。');
+    channel.send(JSON.stringify(obj));
+  }
+  function parseSignal(raw, expectedType) {
+    let obj;
+    try { obj = JSON.parse(raw); } catch { throw new Error('连接码格式不正确，请完整复制整段代码。'); }
+    if (!obj || obj.app !== 'DirectDrop' || obj.version !== 1 || obj.type !== expectedType || typeof obj.sdp !== 'string' || !obj.sdp.startsWith('v=')) {
+      throw new Error(`这不是有效的 ${expectedType === 'offer' ? '连接邀请' : '回复码'}，或版本不兼容。请复制完整内容。`);
+    }
+    return { type: obj.type, sdp: obj.sdp };
+  }
+  function signalString(desc) { return JSON.stringify({ app: 'DirectDrop', version: 1, type: desc.type, sdp: desc.sdp }); }
+  function waitForIceGathering(peer, timeoutMs = 14000) {
+    if (peer.iceGatheringState === 'complete') return Promise.resolve(true);
+    return new Promise(resolve => {
+      let done = false;
+      const finish = result => {
+        if (done) return; done = true; clearTimeout(timer); peer.removeEventListener('icegatheringstatechange', check); resolve(result);
+      };
+      const check = () => { if (peer.iceGatheringState === 'complete') finish(true); };
+      peer.addEventListener('icegatheringstatechange', check);
+      const timer = setTimeout(() => finish(false), timeoutMs);
+      check();
+    });
+  }
+  function makePeer() {
+    closePeer(false);
+    const iceServers = $('stunToggle').checked ? [{ urls: 'stun:stun.l.google.com:19302' }] : [];
+    pc = new RTCPeerConnection({ iceServers, bundlePolicy: 'max-bundle' });
+    pc.addEventListener('connectionstatechange', () => {
+      if (!pc) return;
+      if (pc.connectionState === 'connected') setConnection('已连接', '点对点加密通道已建立，可以开始发送文件或文本。', true);
+      else if (pc.connectionState === 'connecting') setConnection('连接中…', '正在尝试建立点对点连接，请稍候。');
+      else if (pc.connectionState === 'failed') setConnection('连接失败', '当前网络可能限制了 WebRTC 直连。本应用不使用 TURN 中继。');
+      else if (pc.connectionState === 'disconnected') setConnection('连接暂时中断', '网络变化可能导致连接恢复或断开。');
+      else if (pc.connectionState === 'closed') setConnection('连接已关闭', '你可以重新生成连接邀请。');
+    });
+    pc.addEventListener('iceconnectionstatechange', () => {
+      if (pc && pc.iceConnectionState === 'failed') toast('ICE 直连失败：可尝试启用 STUN 或更换网络。');
+    });
+    pc.addEventListener('datachannel', event => attachChannel(event.channel));
+    return pc;
+  }
+  function attachChannel(dc) {
+    channel = dc; dc.binaryType = 'arraybuffer';
+    dc.addEventListener('open', () => { setConnection('已连接', '点对点加密通道已建立，可以开始发送文件或文本。', true); toast('连接成功，可以开始传输'); updateControls(); });
+    dc.addEventListener('close', () => { if (channel === dc) { if (receivingFile && receivingFile.writer) receivingFile.writer.abort().catch(() => {}); receivingFile = null; setConnection('连接已关闭', '数据通道已经关闭。'); updateControls(); } });
+    dc.addEventListener('error', () => toast('数据通道发生错误，请检查网络。'));
+    dc.addEventListener('message', event => {
+      receiveQueue = receiveQueue.then(() => handleIncoming(event.data)).catch(err => {
+        console.error(err); toast(`接收处理失败：${err.message || err}`);
+        if (receivingFile && receivingFile.writer) receivingFile.writer.abort().catch(() => {});
+      });
+    });
+    updateControls();
+  }
+  async function updateSafetyCode() {
+    if (!pc || !pc.localDescription || !pc.remoteDescription) return;
+    const a = pc.localDescription.sdp, b = pc.remoteDescription.sdp;
+    const extract = s => [...s.matchAll(/^a=fingerprint:sha-256 ([0-9A-F:]+)$/gmi)].map(m => m[1].replace(/:/g, '').toLowerCase());
+    const fps = [...new Set([...extract(a), ...extract(b)])].sort();
+    if (fps.length < 2 || !crypto.subtle) { $('safetyCode').textContent = '当前浏览器不可用'; return; }
+    const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(fps.join('|')));
+    const hex = [...new Uint8Array(digest)].map(x => x.toString(16).padStart(2, '0')).join('').slice(0, 8).toUpperCase();
+    $('safetyCode').textContent = `${hex.slice(0,4)}-${hex.slice(4)}`;
+  }
+  function closePeer(showMessage = true) {
+    if (receivingFile && receivingFile.writer) receivingFile.writer.abort().catch(() => {});
+    if (pc) { try { pc.close(); } catch {} }
+    pc = null; channel = null; receivingFile = null; receiveQueue = Promise.resolve();
+    clearWaiters(ackWaiters, new Error('连接已重置。'));
+    clearWaiters(completionWaiters, new Error('连接已重置。'));
+    $('safetyCode').textContent = '等待建立连接';
+    if (showMessage) setConnection('尚未连接', '连接已重置。重新生成邀请即可开始新会话。');
+    updateControls();
+  }
+  async function createOffer() {
+    try {
+      const peer = makePeer();
+      attachChannel(peer.createDataChannel('directdrop', { ordered: true }));
+      setConnection('正在配对', '正在生成连接邀请并收集网络候选地址。');
+      const offer = await peer.createOffer(); await peer.setLocalDescription(offer);
+      const gathered = await waitForIceGathering(peer);
+      $('offerOut').value = signalString(peer.localDescription); $('copyOfferBtn').disabled = false;
+      if (!gathered) toast('网络候选地址收集超时；可以继续尝试，但连接成功率可能降低。');
+      else toast('邀请码已生成，请发送给接收端');
+      updateControls();
+    } catch (err) { toast(`生成邀请失败：${err.message || err}`); }
+  }
+  async function createAnswer() {
+    try {
+      const offer = parseSignal($('offerIn').value.trim(), 'offer');
+      const peer = makePeer(); setConnection('正在配对', '正在处理邀请并生成回复码。');
+      await peer.setRemoteDescription(offer);
+      const answer = await peer.createAnswer(); await peer.setLocalDescription(answer);
+      const gathered = await waitForIceGathering(peer);
+      $('answerOut').value = signalString(peer.localDescription); $('copyAnswerBtn').disabled = false;
+      await updateSafetyCode();
+      if (!gathered) toast('网络候选地址收集超时；可以先发送回复码试试。');
+      else toast('回复码已生成，请发回发送端');
+      updateControls();
+    } catch (err) { toast(`生成回复失败：${err.message || err}`); }
+  }
+  async function applyAnswer() {
+    try {
+      if (!pc) throw new Error('请先在本设备生成连接邀请。');
+      const answer = parseSignal($('answerIn').value.trim(), 'answer');
+      await pc.setRemoteDescription(answer); await updateSafetyCode();
+      setConnection('连接中…', '回复码已应用，正在尝试建立点对点通道。');
+      updateControls(); toast('回复码已应用，正在连接');
+    } catch (err) { toast(`连接失败：${err.message || err}`); }
+  }
+  async function copyValue(id) {
+    const text = $(id).value.trim(); if (!text) return;
+    try { await navigator.clipboard.writeText(text); toast('已复制到剪贴板'); }
+    catch {
+      $(id).focus(); $(id).select();
+      const ok = document.execCommand('copy'); toast(ok ? '已复制到剪贴板' : '复制失败，请手动全选复制');
+    }
+  }
+  function addMessage(text, direction) {
+    const list = $('messageList');
+    const empty = list.querySelector('.empty'); if (empty) empty.remove();
+    const item = document.createElement('div'); item.className = 'message-item';
+    const top = document.createElement('div'); top.className = 'message-top';
+    top.textContent = `${direction} · ${new Date().toLocaleTimeString()}`;
+    const body = document.createElement('div'); body.className = 'message-body'; body.textContent = text;
+    item.append(top, body); list.prepend(item);
+  }
+  function addReceivedFile(meta, details) {
+    const list = $('receivedFiles'); const empty = list.querySelector('.empty'); if (empty) empty.remove();
+    const item = document.createElement('div'); item.className = 'received-item';
+    const title = document.createElement('div'); title.className = 'received-title'; title.textContent = meta.name;
+    const info = document.createElement('div'); info.className = 'received-meta'; info.textContent = `${bytesHuman(meta.size)} · ${details}`;
+    item.append(title, info);
+    if (details === '浏览器临时文件') {
+      const link = document.createElement('a'); link.className = 'download-link'; link.href = meta.url; link.download = meta.name; link.textContent = '下载到设备 ↓'; item.append(link);
+    }
+    list.prepend(item);
+  }
+  async function uniqueName(dir, requested) {
+    const name = safeName(requested);
+    const dot = name.lastIndexOf('.'); const hasExt = dot > 0; const base = hasExt ? name.slice(0, dot) : name; const ext = hasExt ? name.slice(dot) : '';
+    for (let i = 0; i < 1000; i++) {
+      const candidate = i === 0 ? name : `${base} (${i + 1})${ext}`;
+      try { await dir.getFileHandle(candidate); }
+      catch (err) { if (err && err.name === 'NotFoundError') return candidate; throw err; }
+    }
+    return `${base}-${Date.now()}${ext}`;
+  }
+  async function handleIncoming(data) {
+    if (data instanceof ArrayBuffer || ArrayBuffer.isView(data) || data instanceof Blob) {
+      if (!receivingFile) throw new Error('收到没有对应文件头的数据块。');
+      const bytes = data instanceof Blob ? await data.arrayBuffer() : (ArrayBuffer.isView(data) ? data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength) : data);
+      if (receivingFile.writer) await receivingFile.writer.write(bytes); else receivingFile.chunks.push(bytes);
+      receivingFile.received += bytes.byteLength; receivingFile.chunkCount++;
+      const pct = receivingFile.meta.size ? receivingFile.received / receivingFile.meta.size * 100 : 100;
+      setProgress(`接收：${receivingFile.meta.name} · ${bytesHuman(receivingFile.received)} / ${bytesHuman(receivingFile.meta.size)}`, pct);
+      if (receivingFile.chunkCount % WINDOW_CHUNKS === 0 || receivingFile.received >= receivingFile.meta.size) {
+        sendControl({ type: 'ack', id: receivingFile.meta.id, seq: receivingFile.chunkCount });
+      }
+      return;
+    }
+    if (typeof data !== 'string') return;
+    let msg; try { msg = JSON.parse(data); } catch { addMessage(data, '接收文本'); return; }
+    if (!msg || typeof msg.type !== 'string') return;
+    if (msg.type === 'ack') {
+      const key = `${msg.id}:${msg.seq}`; const waiter = ackWaiters.get(key);
+      if (waiter) waiter.resolve(); return;
+    }
+    if (msg.type === 'file-complete') {
+      const waiter = completionWaiters.get(msg.id); if (waiter) waiter.resolve(msg); return;
+    }
+    if (msg.type === 'text') { addMessage(String(msg.text || ''), '接收文本'); toast('收到一段文本'); return; }
+    if (msg.type === 'file-start') {
+      if (receivingFile) throw new Error('上一个文件尚未完成。');
+      const meta = { id: String(msg.id), name: safeName(msg.name), size: Math.max(0, Number(msg.size) || 0), mime: String(msg.mime || 'application/octet-stream'), lastModified: Number(msg.lastModified) || Date.now() };
+      receivingFile = { meta, chunks: [], received: 0, chunkCount: 0, writer: null, savedName: meta.name };
+      if (directoryHandle) {
+        try {
+          const name = await uniqueName(directoryHandle, meta.name);
+          const handle = await directoryHandle.getFileHandle(name, { create: true });
+          receivingFile.writer = await handle.createWritable(); receivingFile.savedName = name;
+        } catch (err) { console.warn('直接写入文件夹失败，将使用浏览器临时文件', err); toast('无法写入所选文件夹，本文件改为浏览器临时保存'); }
+      }
+      setProgress(`接收：${meta.name} · 0 / ${bytesHuman(meta.size)}`, meta.size === 0 ? 100 : 0);
+      return;
+    }
+    if (msg.type === 'file-end') {
+      if (!receivingFile || receivingFile.meta.id !== msg.id) throw new Error('文件结束标记与当前文件不匹配。');
+      const file = receivingFile; receivingFile = null;
+      if (file.writer) {
+        await file.writer.close();
+        addReceivedFile({ ...file.meta, name: file.savedName }, '已直接写入选定文件夹');
+        sendControl({ type: 'file-complete', id: file.meta.id, name: file.savedName, mode: 'disk' });
+      } else {
+        const blob = new Blob(file.chunks, { type: file.meta.mime || 'application/octet-stream' });
+        const url = URL.createObjectURL(blob); objectUrls.add(url);
+        addReceivedFile({ ...file.meta, url }, '浏览器临时文件');
+        sendControl({ type: 'file-complete', id: file.meta.id, name: file.meta.name, mode: 'memory' });
+      }
+      setProgress(`接收完成：${file.meta.name}`, 100); toast(`文件接收完成：${file.meta.name}`); return;
+    }
+  }
+  async function sendFiles() {
+    if (isSendingFiles) return;
+    const files = [...$('fileInput').files]; if (!files.length) { toast('请先选择文件'); return; }
+    if (!channel || channel.readyState !== 'open') { toast('请先建立连接'); return; }
+    isSendingFiles = true; updateControls();
+    const totalBytes = files.reduce((sum, f) => sum + f.size, 0); let totalSent = 0;
+    try {
+      for (const file of files) {
+        const id = randId();
+        sendControl({ type: 'file-start', id, name: file.name, size: file.size, mime: file.type || 'application/octet-stream', lastModified: file.lastModified });
+        let offset = 0, seq = 0;
+        while (offset < file.size) {
+          const batchStart = offset; const batchEnd = Math.min(file.size, batchStart + CHUNK_SIZE * WINDOW_CHUNKS);
+          const chunksInBatch = Math.ceil((batchEnd - batchStart) / CHUNK_SIZE); const targetSeq = seq + chunksInBatch;
+          const ack = waitForAck(id, targetSeq);
+          while (offset < batchEnd) {
+            const buffer = await file.slice(offset, Math.min(offset + CHUNK_SIZE, file.size)).arrayBuffer();
+            if (!channel || channel.readyState !== 'open') throw new Error('连接已中断。');
+            channel.send(buffer); offset += buffer.byteLength; seq++;
+            totalSent += buffer.byteLength;
+            const pct = totalBytes ? totalSent / totalBytes * 100 : 100;
+            setProgress(`发送：${file.name} · ${bytesHuman(offset)} / ${bytesHuman(file.size)}`, pct);
+          }
+          await ack;
+        }
+        const completed = waitForCompletion(id); sendControl({ type: 'file-end', id });
+        setProgress(`等待接收端保存：${file.name}`, totalBytes ? totalSent / totalBytes * 100 : 100);
+        await completed;
+      }
+      setProgress(`发送完成：${files.length} 个文件 · ${bytesHuman(totalSent)}`, 100); toast('所有文件已传输完成');
+    } catch (err) { toast(`发送中断：${err.message || err}`); }
+    finally { isSendingFiles = false; updateControls(); }
+  }
+  function sendText() {
+    const text = $('textInput').value; if (!text.trim()) return;
+    try { sendControl({ type: 'text', text }); addMessage(text, '我发送'); $('textInput').value = ''; updateControls(); toast('文本已发送'); }
+    catch (err) { toast(`发送失败：${err.message || err}`); }
+  }
+  async function chooseFolder() {
+    if (!window.showDirectoryPicker) { toast('当前浏览器不支持直接选择保存文件夹，请使用桌面版 Chrome 或 Edge。'); return; }
+    try {
+      directoryHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+      $('folderState').textContent = '已选择保存文件夹'; $('folderState').style.color = 'var(--mint)';
+      toast('已选择保存位置，后续收到的文件将尝试直接写入磁盘');
+    } catch (err) { if (err && err.name !== 'AbortError') toast(`选择文件夹失败：${err.message || err}`); }
+  }
+  function clearMessages() {
+    $('messageList').replaceChildren(); const empty = document.createElement('div'); empty.className = 'empty'; empty.textContent = '这里不会保留历史记录。'; $('messageList').append(empty);
+    $('receivedFiles').replaceChildren(); const filesEmpty = document.createElement('div'); filesEmpty.className = 'empty'; filesEmpty.textContent = '还没有收到文件。'; $('receivedFiles').append(filesEmpty);
+    for (const url of objectUrls) URL.revokeObjectURL(url); objectUrls.clear(); toast('已清空当前页面临时内容');
+  }
+
+  $('createOfferBtn').addEventListener('click', createOffer);
+  $('createAnswerBtn').addEventListener('click', createAnswer);
+  $('applyAnswerBtn').addEventListener('click', applyAnswer);
+  $('copyOfferBtn').addEventListener('click', () => copyValue('offerOut'));
+  $('copyAnswerBtn').addEventListener('click', () => copyValue('answerOut'));
+  $('resetBtn').addEventListener('click', () => { closePeer(); $('offerOut').value = ''; $('answerOut').value = ''; $('answerIn').value = ''; $('offerIn').value = ''; $('copyOfferBtn').disabled = true; $('copyAnswerBtn').disabled = true; setProgress('等待传输', 0); toast('已重置连接'); });
+  $('fileInput').addEventListener('change', () => {
+    const list = $('fileList'); list.replaceChildren();
+    for (const file of [...$('fileInput').files].slice(0, 12)) { const chip = document.createElement('span'); chip.className = 'file-chip'; chip.textContent = `${file.name} · ${bytesHuman(file.size)}`; list.append(chip); }
+    if ($('fileInput').files.length > 12) { const chip = document.createElement('span'); chip.className = 'file-chip'; chip.textContent = `另有 ${$('fileInput').files.length - 12} 个文件`; list.append(chip); }
+    updateControls();
+  });
+  $('answerIn').addEventListener('input', updateControls);
+  $('textInput').addEventListener('input', updateControls);
+  $('sendFilesBtn').addEventListener('click', sendFiles);
+  $('sendTextBtn').addEventListener('click', sendText);
+  $('chooseFolderBtn').addEventListener('click', chooseFolder);
+  $('clearMessagesBtn').addEventListener('click', clearMessages);
+
+  if (!window.RTCPeerConnection) {
+    setConnection('浏览器不支持', '此浏览器没有 WebRTC 支持，请使用较新的 Chrome、Edge、Firefox 或 Safari。');
+    $('createOfferBtn').disabled = true; $('createAnswerBtn').disabled = true;
+  }
+  if (!window.isSecureContext) toast('请通过 HTTPS 或 localhost 打开本页面，否则浏览器可能禁用部分功能。');
+})();
+</script>
+</body>
+</html>
