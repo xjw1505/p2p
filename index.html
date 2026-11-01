@@ -460,11 +460,24 @@ function makeMessage(text) {
 
 function broadcast(packet) {
   const raw = JSON.stringify(packet);
+  let sent = 0;
+
   for (const peer of peers.values()) {
     if (peer.dc && peer.dc.readyState === 'open') {
-      try { peer.dc.send(raw); } catch(e) {}
+      try {
+        peer.dc.send(raw);
+        sent++;
+      } catch (e) {
+        console.error('发送失败:', peer.id, e);
+      }
     }
   }
+
+  if (sent === 0) {
+    systemMessage('没有建立可用的直连，消息仅显示在本机');
+  }
+
+  console.log(`[Chat] 已发送给 ${sent} 个成员`);
 }
 
 function sendSignal(target, packet) {
@@ -477,53 +490,73 @@ function sendSignal(target, packet) {
 }
 
 function connectPeer(id) {
-  if (!id || id === myId || peers.has(id)) return;
+  if (!id || id === myId) return peers.get(id);
+
+  // 已有连接就复用，避免重复创建 RTCPeerConnection
+  if (peers.has(id)) return peers.get(id);
 
   const pc = new RTCPeerConnection({
-    iceServers:[
-      {urls:'stun:stun.l.google.com:19302'},
-      {urls:'stun:stun.cloudflare.com:3478'}
+    iceServers: [
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls: 'stun:stun.cloudflare.com:3478' }
     ]
   });
 
   const peer = {
-    id,pc,dc:null,
-    makingOffer:false,
-    ignoreOffer:false
+    id,
+    pc,
+    dc: null,
+    makingOffer: false,
+    ignoreOffer: false,
+    polite: myId.localeCompare(id) > 0
   };
 
-  peers.set(id,peer);
+  peers.set(id, peer);
 
-  pc.onicecandidate = e => {
-    if (e.candidate) {
-      sendSignal(id,{
-        type:'candidate',
-        candidate:e.candidate
+  pc.onicecandidate = event => {
+    if (event.candidate) {
+      sendSignal(id, {
+        type: 'candidate',
+        candidate: event.candidate.toJSON()
       });
     }
   };
 
-  pc.ondatachannel = e => {
-    setupDataChannel(peer,e.channel);
-  };
-
-  pc.onconnectionstatechange = () => {
-    if (pc.connectionState === 'failed' ||
-        pc.connectionState === 'closed') {
-      closePeer(id);
-    }
+  pc.ondatachannel = event => {
+    console.log('[WebRTC] 收到数据通道:', id);
+    setupDataChannel(peer, event.channel);
   };
 
   pc.oniceconnectionstatechange = () => {
-    if (pc.iceConnectionState === 'failed') {
+    console.log('[ICE]', id, pc.iceConnectionState);
+    updateConnectionInfo();
+  };
+
+  pc.onconnectionstatechange = () => {
+    console.log('[Peer]', id, pc.connectionState);
+    updateConnectionInfo();
+
+    if (pc.connectionState === 'failed') {
+      console.warn('[WebRTC] 连接失败:', id);
+    }
+
+    if (pc.connectionState === 'closed') {
       closePeer(id);
     }
   };
 
-  // 固定由 ID 字典序较小的一方发起 Offer
+  pc.onsignalingstatechange = () => {
+    console.log('[Signaling]', id, pc.signalingState);
+  };
+
+  // 只由 ID 较小的一端创建数据通道并发起 Offer
   if (myId.localeCompare(id) < 0) {
-    const dc = pc.createDataChannel('chat');
-    setupDataChannel(peer,dc);
+    const dc = pc.createDataChannel('chat', {
+      ordered: true
+    });
+
+    setupDataChannel(peer, dc);
+
     createOffer(peer);
   }
 
@@ -533,46 +566,77 @@ function connectPeer(id) {
 async function createOffer(peer) {
   try {
     if (peer.pc.signalingState !== 'stable') return;
+
     peer.makingOffer = true;
+
     const offer = await peer.pc.createOffer();
     await peer.pc.setLocalDescription(offer);
-    sendSignal(peer.id,{
-      type:'description',
-      description:peer.pc.localDescription
+
+    sendSignal(peer.id, {
+      type: 'description',
+      description: peer.pc.localDescription
     });
-  } catch(e) {
-    console.error('Offer失败',e);
+
+    console.log('[WebRTC] 已发送 Offer:', peer.id);
+  } catch (e) {
+    console.error('[WebRTC] 创建 Offer 失败:', e);
   } finally {
     peer.makingOffer = false;
   }
 }
 
-function setupDataChannel(peer,dc) {
+function setupDataChannel(peer, dc) {
   peer.dc = dc;
 
+  dc.binaryType = 'arraybuffer';
+
   dc.onopen = () => {
-    updateMembers();
+    console.log('[DataChannel] 已连接:', peer.id);
+    updateConnectionInfo();
+    systemMessage('已与 ' + peer.id.slice(0, 6) + ' 建立直连');
   };
 
-  dc.onmessage = e => {
-    if (typeof e.data !== 'string' || e.data.length > 120000) return;
+  dc.onclose = () => {
+    console.warn('[DataChannel] 已断开:', peer.id);
+    updateConnectionInfo();
+  };
+
+  dc.onerror = event => {
+    console.error('[DataChannel] 错误:', peer.id, event);
+  };
+
+  dc.onmessage = event => {
+    if (typeof event.data !== 'string') {
+      console.log('[DataChannel] 收到二进制数据:', event.data.byteLength);
+      return;
+    }
 
     try {
-      const packet = JSON.parse(e.data);
+      const packet = JSON.parse(event.data);
+
       if (!packet || typeof packet !== 'object') return;
 
       if (packet.type === 'chat') {
-        if (typeof packet.id !== 'string' ||
-            typeof packet.text !== 'string' ||
-            packet.text.length > 8000) return;
+        if (
+          typeof packet.id !== 'string' ||
+          typeof packet.text !== 'string' ||
+          packet.text.length > 8000
+        ) return;
 
-        addMessage({...packet,mine:false});
+        console.log('[Chat] 收到消息:', packet);
+
+        addMessage({
+          ...packet,
+          mine: false
+        });
+
+        // 转发给其他在线成员
         broadcast(packet);
       }
-    } catch(err) {}
+    } catch (e) {
+      console.error('[DataChannel] 消息解析失败:', e);
+    }
   };
-
-  dc.onclose = () => updateMembers();
 }
 
 async function handleSignal(from,packet) {
@@ -765,6 +829,27 @@ function connectBroker(index) {
   }
 }
 
+function updateConnectionInfo() {
+  const all = [...peers.values()];
+
+  const connected = all.filter(p =>
+    p.dc && p.dc.readyState === 'open'
+  ).length;
+
+  const total = all.length;
+
+  $('roomSubtitle').textContent =
+    `发现 ${presence.size} 人 · 已建立 ${connected}/${total} 条直连`;
+
+  if (connected > 0) {
+    setStatus('直连正常');
+  } else if (total > 0) {
+    setStatus('正在建立直连');
+  } else {
+    setStatus('等待成员');
+  }
+}
+  
 function updateMembers() {
   const list = $('memberList');
   list.replaceChildren();
