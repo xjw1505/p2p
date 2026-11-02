@@ -522,16 +522,6 @@ function connectPeer(id) {
         address: match[2],
         port: match[3],
         type: match[4]
-      } : c.candidate);const c = event.candidate;
-      const match = c.candidate.match(
-        /candidate:\S+\s+\d+\s+(udp|tcp)\s+\d+\s+(\S+)\s+(\d+)\s+typ\s+(\S+)/
-      );
-      
-      console.log('[本机IP]', match ? {
-        protocol: match[1],
-        address: match[2],
-        port: match[3],
-        type: match[4]
       } : c.candidate);
   
       sendSignal(id, {
