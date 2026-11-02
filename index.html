@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -8,266 +9,96 @@
 <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
 <style>
 :root {
-  --bg:#eef3f0;
-  --paper:#fff;
-  --paper-2:#f8faf9;
-  --ink:#17251f;
-  --muted:#82918a;
-  --line:#e8eeea;
-  --green:#19b879;
-  --green-dark:#0c9b65;
-  --green-soft:#e5f8ef;
-  --shadow:0 12px 40px rgba(35,70,52,.07);
+  --bg:#eef3f0;--paper:#fff;--paper-2:#f8faf9;
+  --ink:#17251f;--muted:#82918a;--line:#e8eeea;
+  --green:#19b879;--green-dark:#0c9b65;
+  --green-soft:#e5f8ef;--shadow:0 12px 40px rgba(35,70,52,.07);
 }
-* { box-sizing:border-box; }
-html,body {
-  margin:0;width:100%;height:100%;
-  overflow:hidden;
-  background:var(--bg);
-  color:var(--ink);
-  font-family:Inter,"Microsoft YaHei",sans-serif;
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--ink);font-family:Inter,"Microsoft YaHei",sans-serif}
+button,textarea{font:inherit}
+button{cursor:pointer}
+button:disabled{cursor:not-allowed;opacity:.55}
+.app{display:grid;grid-template-columns:310px minmax(0,1fr);gap:16px;padding:16px;width:100%;height:100%;min-height:0}
+.sidebar,.chat{min-height:0;background:var(--paper);border:1px solid rgba(220,232,224,.9);border-radius:22px;box-shadow:var(--shadow)}
+.sidebar{display:flex;flex-direction:column;padding:22px 17px;overflow:auto}
+.brand{display:flex;align-items:center;gap:12px;margin-bottom:26px}
+.brand-logo{width:42px;height:42px;border-radius:14px;display:grid;place-items:center;color:white;font-size:21px;font-weight:900;background:linear-gradient(145deg,#36d99a,#0c9b65);box-shadow:0 7px 17px #19b87940}
+.brand-name{font-size:21px;font-weight:850;letter-spacing:1px}
+.brand-sub{font-size:11px;color:var(--muted);margin-top:3px}
+.profile{display:flex;align-items:center;gap:12px;padding:13px;border-radius:16px;background:var(--paper-2);margin-bottom:25px}
+.avatar{width:39px;height:39px;border-radius:13px;flex-shrink:0;display:grid;place-items:center;background:#dff7eb;color:#0b9c64;font-weight:800}
+.profile-name{font-size:13px;font-weight:750}
+.profile-status{font-size:11px;color:var(--muted);margin-top:4px}
+.section-title{display:flex;align-items:center;justify-content:space-between;margin:0 5px 12px;color:#7b8b83;font-size:11px;font-weight:800;letter-spacing:1px}
+.room-card{padding:14px;border-radius:15px;background:var(--green-soft);border:1px solid #d5f1e2;margin-bottom:24px}
+.room-name{font-size:14px;font-weight:800}
+.room-id{font-size:11px;color:#6b8879;margin-top:7px;word-break:break-all}
+.room-actions{display:flex;gap:7px;margin-top:12px}
+.small-btn{border:0;border-radius:9px;padding:7px 10px;background:white;color:#16875c;font-size:11px;font-weight:700}
+.member-list{display:flex;flex-direction:column;gap:10px}
+.member{display:flex;align-items:center;gap:10px;padding:8px 7px;border-radius:12px}
+.member:hover{background:var(--paper-2)}
+.member .avatar{width:32px;height:32px;border-radius:11px;font-size:12px}
+.member-name{font-size:12px;font-weight:650}
+.member-state{font-size:10px;color:var(--muted);margin-top:3px}
+.online-dot{width:7px;height:7px;border-radius:50%;background:#20c982;margin-left:auto;flex-shrink:0}
+.sidebar-footer{margin-top:auto;padding-top:20px;color:#9aa69f;font-size:10px;line-height:1.7}
+.chat{display:flex;flex-direction:column;overflow:hidden;min-width:0}
+.chat-header{height:76px;flex:0 0 76px;padding:0 25px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line)}
+.chat-title{font-size:16px;font-weight:850}
+.chat-subtitle{font-size:11px;color:var(--muted);margin-top:5px}
+.header-right{display:flex;align-items:center;gap:10px}
+.status-pill{border-radius:20px;padding:7px 11px;background:#eff8f3;color:#159766;font-size:11px;font-weight:750}
+.status-pill.error{background:#fff0ed;color:#d65d48}
+.icon-btn{width:35px;height:35px;border:1px solid var(--line);border-radius:11px;background:white;color:#64766c}
+.chat-scroll{flex:1;min-height:0;overflow-y:auto;padding:24px 27px;overscroll-behavior:contain}
+.welcome{text-align:center;color:#9aa69f;font-size:11px;margin:8px 0 25px}
+.message-row{display:flex;gap:10px;align-items:flex-end;margin:15px 0;max-width:78%}
+.message-row.mine{margin-left:auto;flex-direction:row-reverse}
+.message-avatar{width:31px;height:31px;border-radius:11px;flex-shrink:0;display:grid;place-items:center;font-size:11px;font-weight:800;color:#27865f;background:#e8f5ed}
+.message-content{min-width:0}
+.message-meta{display:flex;gap:8px;align-items:center;margin:0 4px 6px;font-size:10px;color:#93a198}
+.mine .message-meta{justify-content:flex-end}
+.bubble{padding:11px 14px;border-radius:15px;background:#f0f5f2;color:#26372e;font-size:13px;line-height:1.65;white-space:pre-wrap;overflow-wrap:anywhere}
+.mine .bubble{background:#dff8eb;color:#155d40;border-bottom-right-radius:5px}
+.message-file{display:block;margin-top:8px;color:#13885b;font-size:12px;text-decoration:underline;overflow-wrap:anywhere}
+.system-message{width:max-content;max-width:90%;margin:18px auto;padding:7px 12px;border-radius:20px;background:#f2f5f3;color:#92a097;font-size:10px;text-align:center}
+.composer-wrap{flex:0 0 auto;padding:13px 20px 17px;background:linear-gradient(180deg,#ffffff00,#fff 18%);border-top:1px solid var(--line)}
+.transfer-status{display:none;font-size:11px;color:#168b5c;margin:0 5px 9px}
+.composer{border:1px solid #e4ece7;border-radius:17px;padding:10px 12px 9px;background:#fbfdfc;box-shadow:0 4px 15px #1d704b08}
+.composer textarea{display:block;width:100%;height:48px;resize:none;border:0;outline:0;background:transparent;color:var(--ink);font-family:inherit;font-size:13px;line-height:1.6;padding:5px 3px}
+.composer textarea::placeholder{color:#a6b2ab}
+.composer-tools{display:flex;align-items:center;gap:8px;min-width:0}
+.tool-btn{flex:0 0 auto;border:0;border-radius:9px;padding:8px 10px;background:#f0f5f2;color:#64776c;font-size:11px;font-weight:700}
+.composer-hint{flex:1;min-width:0;text-align:center;color:#a0aca4;font-size:10px}
+.send-btn{flex:0 0 auto;border:0;border-radius:10px;padding:9px 20px;color:white;background:linear-gradient(135deg,#26d28d,#0ca36a);box-shadow:0 5px 12px #19b87930;font-size:12px;font-weight:800}
+.send-btn:active{transform:scale(.97)}
+.mobile-members{display:none}
+#fileInput{display:none}
+@media(max-width:760px){
+  .app{display:block;padding:0;height:100dvh;height:100%;min-height:0}
+  .sidebar{display:none}
+  .chat{width:100%;height:100%;border:0;border-radius:0;box-shadow:none}
+  .chat-header{height:66px;flex-basis:66px;padding:0 13px;gap:8px}
+  .chat-title{font-size:15px}
+  .chat-subtitle{font-size:10px}
+  .chat-scroll{padding:17px 12px 20px}
+  .message-row{max-width:91%}
+  .composer-wrap{padding:9px 10px calc(9px + env(safe-area-inset-bottom))}
+  .composer{padding:8px 9px}
+  .composer textarea{height:46px;min-height:46px}
+  .composer-hint{display:none}
+  .tool-btn{padding:8px 9px}
+  .send-btn{padding:9px 15px}
+  .mobile-members{display:block}
+  .header-right{gap:6px}
+  .status-pill{font-size:10px;padding:6px 8px}
 }
-button,textarea { font:inherit; }
-button { cursor:pointer; }
-.app {
-  display:grid;
-  grid-template-columns:310px minmax(0,1fr);
-  gap:16px;
-  padding:16px;
-  width:100%;
-  height:100%;
-  min-height:0;
-}
-.sidebar,.chat {
-  min-height:0;
-  background:var(--paper);
-  border:1px solid rgba(220,232,224,.9);
-  border-radius:22px;
-  box-shadow:var(--shadow);
-}
-.sidebar {
-  display:flex;
-  flex-direction:column;
-  padding:22px 17px;
-  overflow:auto;
-}
-.brand {
-  display:flex;align-items:center;gap:12px;
-  margin-bottom:26px;
-}
-.brand-logo {
-  width:42px;height:42px;border-radius:14px;
-  display:grid;place-items:center;
-  color:white;font-size:21px;font-weight:900;
-  background:linear-gradient(145deg,#36d99a,#0c9b65);
-  box-shadow:0 7px 17px #19b87940;
-}
-.brand-name {font-size:21px;font-weight:850;letter-spacing:1px}
-.brand-sub {font-size:11px;color:var(--muted);margin-top:3px}
-.profile {
-  display:flex;align-items:center;gap:12px;
-  padding:13px;border-radius:16px;
-  background:var(--paper-2);
-  margin-bottom:25px;
-}
-.avatar {
-  width:39px;height:39px;border-radius:13px;
-  flex-shrink:0;display:grid;place-items:center;
-  background:#dff7eb;color:#0b9c64;font-weight:800;
-}
-.profile-name {font-size:13px;font-weight:750}
-.profile-status {font-size:11px;color:var(--muted);margin-top:4px}
-.section-title {
-  display:flex;align-items:center;justify-content:space-between;
-  margin:0 5px 12px;
-  color:#7b8b83;font-size:11px;font-weight:800;
-  letter-spacing:1px;
-}
-.room-card {
-  padding:14px;border-radius:15px;
-  background:var(--green-soft);
-  border:1px solid #d5f1e2;
-  margin-bottom:24px;
-}
-.room-name {font-size:14px;font-weight:800}
-.room-id {font-size:11px;color:#6b8879;margin-top:7px;word-break:break-all}
-.room-actions {display:flex;gap:7px;margin-top:12px}
-.small-btn {
-  border:0;border-radius:9px;padding:7px 10px;
-  background:white;color:#16875c;font-size:11px;font-weight:700;
-}
-.member-list {display:flex;flex-direction:column;gap:10px}
-.member {
-  display:flex;align-items:center;gap:10px;
-  padding:8px 7px;border-radius:12px;
-}
-.member:hover {background:var(--paper-2)}
-.member .avatar {width:32px;height:32px;border-radius:11px;font-size:12px}
-.member-name {font-size:12px;font-weight:650}
-.member-state {font-size:10px;color:var(--muted);margin-top:3px}
-.online-dot {
-  width:7px;height:7px;border-radius:50%;
-  background:#20c982;margin-left:auto;flex-shrink:0;
-}
-.sidebar-footer {
-  margin-top:auto;padding-top:20px;
-  color:#9aa69f;font-size:10px;line-height:1.7;
-}
-.chat {
-  display:flex;flex-direction:column;
-  overflow:hidden;min-width:0;
-}
-.chat-header {
-  height:76px;flex:0 0 76px;
-  padding:0 25px;
-  display:flex;align-items:center;
-  justify-content:space-between;
-  border-bottom:1px solid var(--line);
-}
-.chat-title {font-size:16px;font-weight:850}
-.chat-subtitle {font-size:11px;color:var(--muted);margin-top:5px}
-.header-right {display:flex;align-items:center;gap:10px}
-.status-pill {
-  border-radius:20px;padding:7px 11px;
-  background:#eff8f3;color:#159766;
-  font-size:11px;font-weight:750;
-}
-.icon-btn {
-  width:35px;height:35px;border:1px solid var(--line);
-  border-radius:11px;background:white;color:#64766c;
-}
-.chat-scroll {
-  flex:1;min-height:0;overflow-y:auto;
-  padding:24px 27px;
-  overscroll-behavior:contain;
-}
-.welcome {
-  text-align:center;color:#9aa69f;
-  font-size:11px;margin:8px 0 25px;
-}
-.message-row {
-  display:flex;gap:10px;
-  align-items:flex-end;margin:15px 0;
-  max-width:78%;
-}
-.message-row.mine {
-  margin-left:auto;flex-direction:row-reverse;
-}
-.message-avatar {
-  width:31px;height:31px;border-radius:11px;
-  flex-shrink:0;display:grid;place-items:center;
-  font-size:11px;font-weight:800;
-  color:#27865f;background:#e8f5ed;
-}
-.message-content {min-width:0}
-.message-meta {
-  display:flex;gap:8px;align-items:center;
-  margin:0 4px 6px;font-size:10px;color:#93a198;
-}
-.mine .message-meta {justify-content:flex-end}
-.bubble {
-  padding:11px 14px;border-radius:15px;
-  background:#f0f5f2;
-  color:#26372e;font-size:13px;line-height:1.65;
-  white-space:pre-wrap;overflow-wrap:anywhere;
-}
-.mine .bubble {
-  background:#dff8eb;color:#155d40;
-  border-bottom-right-radius:5px;
-}
-.message-file {
-  display:block;margin-top:8px;
-  color:#13885b;font-size:12px;
-  text-decoration:underline;
-}
-.system-message {
-  width:max-content;max-width:90%;
-  margin:18px auto;padding:7px 12px;
-  border-radius:20px;background:#f2f5f3;
-  color:#92a097;font-size:10px;text-align:center;
-}
-.composer-wrap {
-  flex:0 0 auto;
-  padding:13px 20px 17px;
-  background:linear-gradient(180deg,#ffffff00,#fff 18%);
-  border-top:1px solid var(--line);
-}
-.transfer-status {
-  display:none;font-size:11px;color:#168b5c;
-  margin:0 5px 9px;
-}
-.composer {
-  border:1px solid #e4ece7;
-  border-radius:17px;padding:10px 12px 9px;
-  background:#fbfdfc;
-  box-shadow:0 4px 15px #1d704b08;
-}
-.composer textarea {
-  display:block;width:100%;height:48px;
-  resize:none;border:0;outline:0;
-  background:transparent;color:var(--ink);
-  font-family:inherit;font-size:13px;
-  line-height:1.6;padding:5px 3px;
-}
-.composer textarea::placeholder {color:#a6b2ab}
-.composer-tools {
-  display:flex;align-items:center;gap:8px;
-  min-width:0;
-}
-.tool-btn {
-  flex:0 0 auto;border:0;border-radius:9px;
-  padding:8px 10px;background:#f0f5f2;
-  color:#64776c;font-size:11px;font-weight:700;
-}
-.composer-hint {
-  flex:1;min-width:0;text-align:center;
-  color:#a0aca4;font-size:10px;
-}
-.send-btn {
-  flex:0 0 auto;border:0;border-radius:10px;
-  padding:9px 20px;color:white;
-  background:linear-gradient(135deg,#26d28d,#0ca36a);
-  box-shadow:0 5px 12px #19b87930;
-  font-size:12px;font-weight:800;
-}
-.send-btn:active {transform:scale(.97)}
-.mobile-members {display:none}
-#fileInput {display:none}
-@media(max-width:760px) {
-  .app {
-    display:block;padding:0;
-    height:100dvh;height:100%;
-    min-height:0;
-  }
-  .sidebar {display:none}
-  .chat {
-    width:100%;height:100%;
-    border:0;border-radius:0;box-shadow:none;
-  }
-  .chat-header {
-    height:66px;flex-basis:66px;
-    padding:0 13px;gap:8px;
-  }
-  .chat-title {font-size:15px}
-  .chat-subtitle {font-size:10px}
-  .chat-scroll {padding:17px 12px 20px}
-  .message-row {max-width:91%}
-  .composer-wrap {
-    padding:9px 10px calc(9px + env(safe-area-inset-bottom));
-  }
-  .composer {padding:8px 9px}
-  .composer textarea {height:46px;min-height:46px}
-  .composer-hint {display:none}
-  .tool-btn {padding:8px 9px}
-  .send-btn {padding:9px 15px}
-  .mobile-members {display:block}
-  .header-right {gap:6px}
-  .status-pill {font-size:10px;padding:6px 8px}
-}
-@media(max-width:380px) {
-  .tool-btn {padding:8px 7px;font-size:10px}
-  .send-btn {padding:9px 12px}
-  .composer-wrap {padding-left:7px;padding-right:7px}
+@media(max-width:380px){
+  .tool-btn{padding:8px 7px;font-size:10px}
+  .send-btn{padding:9px 12px}
+  .composer-wrap{padding-left:7px;padding-right:7px}
 }
 </style>
 </head>
@@ -276,20 +107,12 @@ button { cursor:pointer; }
   <aside class="sidebar">
     <div class="brand">
       <div class="brand-logo">微</div>
-      <div>
-        <div class="brand-name">微聊</div>
-        <div class="brand-sub">多人实时聊天</div>
-      </div>
+      <div><div class="brand-name">微聊</div><div class="brand-sub">多人实时聊天</div></div>
     </div>
-
     <div class="profile">
       <div class="avatar" id="myAvatar">我</div>
-      <div>
-        <div class="profile-name" id="myName">我</div>
-        <div class="profile-status">当前设备</div>
-      </div>
+      <div><div class="profile-name" id="myName">我</div><div class="profile-status">当前设备</div></div>
     </div>
-
     <div class="section-title">当前聊天室</div>
     <div class="room-card">
       <div class="room-name">全员聊天室</div>
@@ -299,17 +122,9 @@ button { cursor:pointer; }
         <button class="small-btn" id="shareBtn">分享链接</button>
       </div>
     </div>
-
-    <div class="section-title">
-      <span>在线成员</span>
-      <span id="memberCount">1 人</span>
-    </div>
+    <div class="section-title"><span>在线成员</span><span id="memberCount">1 人</span></div>
     <div class="member-list" id="memberList"></div>
-
-    <div class="sidebar-footer">
-      消息通过在线设备之间传输。<br>
-      关闭页面后将不再接收消息。
-    </div>
+    <div class="sidebar-footer">消息通过在线设备之间传输。<br>关闭页面后将不再接收消息。</div>
   </aside>
 
   <main class="chat">
@@ -323,17 +138,14 @@ button { cursor:pointer; }
         <span class="status-pill" id="connectionStatus">连接中</span>
       </div>
     </header>
-
     <section class="chat-scroll" id="chatScroll">
       <div class="welcome">以下是当前房间的实时消息</div>
       <div id="messages"></div>
     </section>
-
     <footer class="composer-wrap">
       <div class="transfer-status" id="transferStatus"></div>
       <div class="composer">
-        <textarea id="messageInput" maxlength="8000"
-          placeholder="输入消息，Enter 发送，Shift + Enter 换行"></textarea>
+        <textarea id="messageInput" maxlength="8000" placeholder="输入消息，Enter 发送，Shift + Enter 换行"></textarea>
         <div class="composer-tools">
           <button class="tool-btn" id="attachBtn">＋ 文件</button>
           <button class="tool-btn" id="emojiBtn">☺</button>
@@ -345,24 +157,16 @@ button { cursor:pointer; }
     </footer>
   </main>
 </div>
+
 <script>
 (() => {
 'use strict';
 
 const $ = id => document.getElementById(id);
 const params = new URLSearchParams(location.search);
-
-const room = params.get('room') || 'main';
+const room = (params.get('room') || 'main').slice(0,100);
 const myId = crypto.randomUUID();
 const myName = '用户' + myId.slice(0,4);
-const peers = new Map();
-const seenMessages = new Set();
-const pendingCandidates = new Map();
-
-let mqttClient = null;
-let announceTimer = null;
-let reconnecting = false;
-let brokerIndex = 0;
 
 const brokers = [
   'wss://broker.emqx.io:8084/mqtt',
@@ -371,71 +175,97 @@ const brokers = [
 
 const base = 'weichat/' + encodeURIComponent(room);
 const presenceTopic = base + '/presence';
+const discoverTopic = base + '/discover';
 const signalTopic = base + '/signal/' + myId;
+
+const ICE_SERVERS = [
+  {urls:'stun:stun.l.google.com:19302'},
+  {urls:'stun:stun.cloudflare.com:3478'}
+];
+
+const PRESENCE_INTERVAL = 12000;
+const PRESENCE_TIMEOUT = 45000;
+const MAX_TEXT_LENGTH = 8000;
+const MAX_FILE_SIZE = 20 * 1024 * 1024;
+const FILE_CHUNK_SIZE = 16 * 1024;
+const MAX_BUFFERED_AMOUNT = 1024 * 1024;
+
+const peers = new Map();
 const presence = new Map();
+const pendingCandidates = new Map();
+const seenMessages = new Set();
+const incomingFiles = new Map();
+
+let mqttClient = null;
+let announceTimer = null;
+let presenceTimer = null;
+let brokerRetryTimer = null;
+let brokerIndex = 0;
+let manuallyClosing = false;
+let hasConnectedBroker = false;
 
 $('myName').textContent = myName;
 $('myAvatar').textContent = myName.slice(-2);
 $('roomDisplay').textContent = '房间：' + room;
 $('roomSubtitle').textContent = '房间号：' + room;
 
-function setStatus(text) {
-  $('connectionStatus').textContent = text;
+function setStatus(text,error=false){
+  const el=$('connectionStatus');
+  el.textContent=text;
+  el.classList.toggle('error',error);
 }
 
-function systemMessage(text) {
-  const el = document.createElement('div');
-  el.className = 'system-message';
-  el.textContent = text;
+function scrollBottom(){
+  const el=$('chatScroll');
+  el.scrollTop=el.scrollHeight;
+}
+
+function systemMessage(text){
+  const el=document.createElement('div');
+  el.className='system-message';
+  el.textContent=text;
   $('messages').appendChild(el);
   scrollBottom();
 }
 
-function scrollBottom() {
-  const el = $('chatScroll');
-  el.scrollTop = el.scrollHeight;
-}
-
-function escapeText(value) {
-  return String(value);
-}
-
-function addMessage({id,sender,name,text,file,mine,time}) {
-  if (seenMessages.has(id)) return;
+function addMessage({id,name,text,file,mine,time}){
+  if(!id || seenMessages.has(id)) return;
   seenMessages.add(id);
 
-  const row = document.createElement('div');
-  row.className = 'message-row' + (mine ? ' mine' : '');
+  if(seenMessages.size>3000){
+    seenMessages.delete(seenMessages.values().next().value);
+  }
 
-  const avatar = document.createElement('div');
-  avatar.className = 'message-avatar';
-  avatar.textContent = (name || '?').slice(-2);
+  const row=document.createElement('div');
+  row.className='message-row'+(mine?' mine':'');
 
-  const content = document.createElement('div');
-  content.className = 'message-content';
+  const avatar=document.createElement('div');
+  avatar.className='message-avatar';
+  avatar.textContent=(name||'?').slice(-2);
 
-  const meta = document.createElement('div');
-  meta.className = 'message-meta';
+  const content=document.createElement('div');
+  content.className='message-content';
 
-  const nick = document.createElement('span');
-  nick.textContent = mine ? '我' : name;
+  const meta=document.createElement('div');
+  meta.className='message-meta';
 
-  const stamp = document.createElement('span');
-  stamp.textContent = time || new Date().toLocaleTimeString();
+  const nick=document.createElement('span');
+  nick.textContent=mine?'我':(name||'未知用户');
 
+  const stamp=document.createElement('span');
+  stamp.textContent=time||new Date().toLocaleTimeString();
   meta.append(nick,stamp);
 
-  const bubble = document.createElement('div');
-  bubble.className = 'bubble';
+  const bubble=document.createElement('div');
+  bubble.className='bubble';
+  if(text) bubble.textContent=text;
 
-  if (text) bubble.textContent = text;
-
-  if (file) {
-    const link = document.createElement('a');
-    link.className = 'message-file';
-    link.href = file.url;
-    link.download = file.name;
-    link.textContent = '下载文件：' + file.name;
+  if(file&&file.url){
+    const link=document.createElement('a');
+    link.className='message-file';
+    link.href=file.url;
+    link.download=file.name||'download';
+    link.textContent='下载文件：'+(file.name||'未命名文件');
     bubble.appendChild(link);
   }
 
@@ -445,8 +275,15 @@ function addMessage({id,sender,name,text,file,mine,time}) {
   scrollBottom();
 }
 
-function makeMessage(text) {
-  const packet = {
+function setTransferStatus(text,visible=true){
+  const el=$('transferStatus');
+  el.textContent=text;
+  el.style.display=visible?'block':'none';
+}
+
+/* 消息：每个设备直接发送给所有已连接成员，不做中继。 */
+function sendChat(text){
+  const packet={
     type:'chat',
     id:crypto.randomUUID(),
     sender:myId,
@@ -454,657 +291,734 @@ function makeMessage(text) {
     text,
     time:new Date().toLocaleTimeString()
   };
+
   addMessage({...packet,mine:true});
-  broadcast(packet);
+
+  let sent=0;
+  for(const peer of peers.values()){
+    if(!peer.dc||peer.dc.readyState!=='open') continue;
+    try{
+      peer.dc.send(JSON.stringify(packet));
+      sent++;
+    }catch{}
+  }
+
+  if(sent===0) systemMessage('当前没有已建立直连的成员，消息仅显示在本机');
 }
 
-function broadcast(packet) {
-  const raw = JSON.stringify(packet);
-  let sent = 0;
+/* MQTT 信令 */
+function publishSignal(target,packet){
+  if(!mqttClient||!mqttClient.connected||!target||target===myId) return;
+  mqttClient.publish(base+'/signal/'+target,JSON.stringify({
+    from:myId,
+    packet
+  }),{qos:0});
+}
 
-  for (const peer of peers.values()) {
-    if (peer.dc && peer.dc.readyState === 'open') {
-      try {
-        peer.dc.send(raw);
-        sent++;
-      } catch (e) {
-        console.error('发送失败:', peer.id, e);
+function announce(){
+  if(!mqttClient||!mqttClient.connected) return;
+
+  mqttClient.publish(presenceTopic,JSON.stringify({
+    id:myId,name:myName,online:true,time:Date.now()
+  }),{qos:0});
+
+  mqttClient.publish(discoverTopic,JSON.stringify({
+    id:myId,name:myName,time:Date.now()
+  }),{qos:0});
+}
+
+function connectBroker(index=0){
+  if(manuallyClosing) return;
+  if(typeof mqtt==='undefined'){
+    setStatus('MQTT 组件加载失败',true);
+    return;
+  }
+
+  brokerIndex=index%brokers.length;
+  setStatus('正在连接信令');
+
+  let client;
+  try{
+    client=mqtt.connect(brokers[brokerIndex],{
+      clientId:'wc_'+myId.replace(/-/g,'').slice(0,20),
+      clean:true,
+      connectTimeout:10000,
+      reconnectPeriod:3000,
+      keepalive:30,
+      will:{
+        topic:presenceTopic,
+        payload:JSON.stringify({id:myId,name:myName,online:false}),
+        qos:0,
+        retain:false
       }
+    });
+  }catch{
+    retryBroker();
+    return;
+  }
+
+  mqttClient=client;
+
+  client.on('connect',()=>{
+    if(client!==mqttClient) return;
+    hasConnectedBroker=true;
+    setStatus('信令已连接');
+
+    client.subscribe([presenceTopic,discoverTopic,signalTopic],{qos:0},error=>{
+      if(error){
+        setStatus('房间订阅失败',true);
+        return;
+      }
+      announce();
+      if(announceTimer) clearInterval(announceTimer);
+      announceTimer=setInterval(announce,PRESENCE_INTERVAL);
+    });
+  });
+
+  client.on('reconnect',()=>{
+    if(client===mqttClient) setStatus('信令重连中');
+  });
+
+  client.on('message',(topic,payload)=>{
+    if(client!==mqttClient) return;
+
+    let data;
+    try{data=JSON.parse(payload.toString())}catch{return}
+    if(!data||typeof data!=='object') return;
+
+    if(topic===presenceTopic){
+      handlePresence(data);
+      return;
+    }
+
+    if(topic===discoverTopic){
+      if(!data.id||data.id===myId) return;
+      connectPeer(data.id);
+      return;
+    }
+
+    if(topic===signalTopic){
+      if(data.from&&data.packet) handleSignal(data.from,data.packet);
+    }
+  });
+
+  client.on('error',()=>{
+    if(client!==mqttClient) return;
+    setStatus('信令连接异常',true);
+
+    if(!hasConnectedBroker){
+      try{client.end(true)}catch{}
+      mqttClient=null;
+      retryBroker();
+    }
+  });
+
+  client.on('close',()=>{
+    if(client!==mqttClient||manuallyClosing) return;
+    if(announceTimer) clearInterval(announceTimer);
+    announceTimer=null;
+    setStatus('信令连接断开',true);
+
+    if(!hasConnectedBroker) retryBroker();
+  });
+}
+
+function retryBroker(){
+  if(brokerRetryTimer||manuallyClosing) return;
+  brokerRetryTimer=setTimeout(()=>{
+    brokerRetryTimer=null;
+    if(mqttClient){
+      try{mqttClient.end(true)}catch{}
+      mqttClient=null;
+    }
+    connectBroker((brokerIndex+1)%brokers.length);
+  },2500);
+}
+
+/* 成员列表 */
+function handlePresence(data){
+  if(!data.id||data.id===myId) return;
+
+  if(data.online===false){
+    presence.delete(data.id);
+    closePeer(data.id);
+    updateMembers();
+    updateConnectionInfo();
+    return;
+  }
+
+  presence.set(data.id,{
+    name:typeof data.name==='string'?data.name:'用户',
+    time:Date.now()
+  });
+
+  connectPeer(data.id);
+  updateMembers();
+  updateConnectionInfo();
+}
+
+function updateMembers(){
+  const list=$('memberList');
+  list.replaceChildren();
+
+  const members=[{id:myId,name:myName,mine:true}];
+  const now=Date.now();
+
+  for(const [id,data] of presence){
+    if(now-data.time<=PRESENCE_TIMEOUT){
+      members.push({id,name:data.name});
     }
   }
 
-  if (sent === 0) {
-    systemMessage('没有建立可用的直连，消息仅显示在本机');
+  $('memberCount').textContent=members.length+' 人';
+
+  for(const member of members){
+    const row=document.createElement('div');
+    row.className='member';
+
+    const avatar=document.createElement('div');
+    avatar.className='avatar';
+    avatar.textContent=member.name.slice(-2);
+
+    const info=document.createElement('div');
+    const name=document.createElement('div');
+    name.className='member-name';
+    name.textContent=member.mine?member.name+'（我）':member.name;
+
+    const state=document.createElement('div');
+    state.className='member-state';
+    state.textContent=member.mine?'本设备':'在线';
+
+    const dot=document.createElement('div');
+    dot.className='online-dot';
+
+    info.append(name,state);
+    row.append(avatar,info,dot);
+    list.appendChild(row);
   }
-
-  console.log(`[Chat] 已发送给 ${sent} 个成员`);
 }
 
-function sendSignal(target, packet) {
-  if (!mqttClient || !mqttClient.connected) return;
-  mqttClient.publish(base + '/signal/' + target,
-    JSON.stringify({
-      from:myId,
-      packet
-    }), {qos:0});
+function updateConnectionInfo(){
+  const all=[...peers.values()];
+  const connected=all.filter(p=>p.dc&&p.dc.readyState==='open').length;
+  $('roomSubtitle').textContent=`在线成员 ${presence.size+1} 人 · 已建立 ${connected}/${all.length} 条直连`;
+
+  if(connected>0) setStatus('直连正常');
+  else if(all.length>0) setStatus('正在建立直连');
+  else if(mqttClient&&mqttClient.connected) setStatus('等待成员');
 }
 
-function connectPeer(id) {
-  if (!id || id === myId) return peers.get(id);
+/* WebRTC：ID 较小的一端负责创建 DataChannel 和 Offer。 */
+function connectPeer(id){
+  if(!id||id===myId) return null;
+  if(peers.has(id)) return peers.get(id);
 
-  // 已有连接就复用，避免重复创建 RTCPeerConnection
-  if (peers.has(id)) return peers.get(id);
-
-  const pc = new RTCPeerConnection({
-    iceServers: [
-      { urls: 'stun:stun.l.google.com:19302' },
-      { urls: 'stun:stun.cloudflare.com:3478' }
-    ]
-  });
-
-  const peer = {
-    id,
-    pc,
-    dc: null,
-    makingOffer: false,
-    ignoreOffer: false,
-    polite: myId.localeCompare(id) > 0
+  const pc=new RTCPeerConnection({iceServers:ICE_SERVERS});
+  const peer={
+    id,pc,dc:null,closed:false,
+    isInitiator:myId.localeCompare(id)<0
   };
+  peers.set(id,peer);
 
-  peers.set(id, peer);
-
-  pc.onicecandidate = event => {
-    if (event.candidate) {
-      const c = event.candidate;
-      const match = c.candidate.match(
-        /candidate:\S+\s+\d+\s+(udp|tcp)\s+\d+\s+(\S+)\s+(\d+)\s+typ\s+(\S+)/
-      );
-      
-      console.log('[本机IP]', match ? {
-        protocol: match[1],
-        address: match[2],
-        port: match[3],
-        type: match[4]
-      } : c.candidate);
-  
-      sendSignal(id, {
-        type: 'candidate',
-        candidate: c.toJSON()
+  pc.onicecandidate=event=>{
+    if(event.candidate){
+      publishSignal(id,{
+        type:'candidate',
+        candidate:event.candidate.toJSON()
       });
     }
   };
 
-  pc.ondatachannel = event => {
-    console.log('[WebRTC] 收到数据通道:', id);
-    setupDataChannel(peer, event.channel);
-  };
+  pc.ondatachannel=event=>setupDataChannel(peer,event.channel);
 
-  pc.oniceconnectionstatechange = () => {
-    console.log('[ICE]', id, pc.iceConnectionState);
+  pc.oniceconnectionstatechange=updateConnectionInfo;
+
+  pc.onconnectionstatechange=()=>{
     updateConnectionInfo();
-  };
-
-  pc.onconnectionstatechange = () => {
-    console.log('[Peer]', id, pc.connectionState);
-    updateConnectionInfo();
-
-    if (pc.connectionState === 'failed') {
-      console.warn('[WebRTC] 连接失败:', id);
+    if(pc.connectionState==='failed'){
+      systemMessage('与成员 '+id.slice(0,6)+' 的连接失败');
     }
-
-    if (pc.connectionState === 'closed') {
-      closePeer(id);
-    }
+    if(pc.connectionState==='closed') closePeer(id);
   };
 
-  pc.onsignalingstatechange = () => {
-    console.log('[Signaling]', id, pc.signalingState);
-  };
-
-  // 只由 ID 较小的一端创建数据通道并发起 Offer
-  if (myId.localeCompare(id) < 0) {
-    const dc = pc.createDataChannel('chat', {
-      ordered: true
-    });
-
-    setupDataChannel(peer, dc);
-
+  if(peer.isInitiator){
+    setupDataChannel(peer,pc.createDataChannel('chat',{ordered:true}));
     createOffer(peer);
   }
 
   return peer;
 }
 
-async function createOffer(peer) {
-  try {
-    if (peer.pc.signalingState !== 'stable') return;
+async function createOffer(peer){
+  if(peer.closed||peer.pc.signalingState!=='stable') return;
 
-    peer.makingOffer = true;
-
-    const offer = await peer.pc.createOffer();
+  try{
+    const offer=await peer.pc.createOffer();
     await peer.pc.setLocalDescription(offer);
-
-    sendSignal(peer.id, {
-      type: 'description',
-      description: peer.pc.localDescription
+    publishSignal(peer.id,{
+      type:'description',
+      description:peer.pc.localDescription
     });
-
-    console.log('[WebRTC] 已发送 Offer:', peer.id);
-  } catch (e) {
-    console.error('[WebRTC] 创建 Offer 失败:', e);
-  } finally {
-    peer.makingOffer = false;
+  }catch{
+    systemMessage('创建连接请求失败：'+peer.id.slice(0,6));
   }
 }
 
-function setupDataChannel(peer, dc) {
-  peer.dc = dc;
+async function flushCandidates(peer){
+  const queue=pendingCandidates.get(peer.id);
+  if(!queue||!peer.pc.remoteDescription) return;
 
-  dc.binaryType = 'arraybuffer';
-
-  dc.onopen = () => {
-    console.log('[DataChannel] 已连接:', peer.id);
-    updateConnectionInfo();
-    systemMessage('已与 ' + peer.id.slice(0, 6) + ' 建立直连');
-  };
-
-  dc.onclose = () => {
-    console.warn('[DataChannel] 已断开:', peer.id);
-    updateConnectionInfo();
-  };
-
-  dc.onerror = event => {
-    console.error('[DataChannel] 错误:', peer.id, event);
-  };
-
-  dc.onmessage = event => {
-    if (typeof event.data !== 'string') {
-      console.log('[DataChannel] 收到二进制数据:', event.data.byteLength);
-      return;
-    }
-
-    try {
-      const packet = JSON.parse(event.data);
-
-      if (!packet || typeof packet !== 'object') return;
-
-      if (packet.type === 'chat') {
-        if (
-          typeof packet.id !== 'string' ||
-          typeof packet.text !== 'string' ||
-          packet.text.length > 8000
-        ) return;
-
-        console.log('[Chat] 收到消息:', packet);
-
-        addMessage({
-          ...packet,
-          mine: false
-        });
-
-        // 转发给其他在线成员
-        broadcast(packet);
-      }
-    } catch (e) {
-      console.error('[DataChannel] 消息解析失败:', e);
-    }
-  };
+  pendingCandidates.delete(peer.id);
+  for(const candidate of queue){
+    try{await peer.pc.addIceCandidate(candidate)}catch{}
+  }
 }
 
-async function handleSignal(from,packet) {
-  if (!from || from === myId || !packet) return;
+async function handleSignal(from,packet){
+  if(!from||from===myId||!packet) return;
 
-  let peer = peers.get(from);
-  if (!peer) peer = connectPeer(from);
-  if (!peer) return;
+  const peer=peers.get(from)||connectPeer(from);
+  if(!peer||peer.closed) return;
+  const pc=peer.pc;
 
-  const pc = peer.pc;
+  if(packet.type==='description'){
+    const description=packet.description;
+    if(!description||!description.type) return;
 
-  if (packet.type === 'description') {
-    const description = packet.description;
-    if (!description) return;
+    try{
+      if(description.type==='offer'){
+        if(peer.isInitiator||pc.signalingState!=='stable') return;
 
-    try {
-      const readyForOffer =
-        !peer.makingOffer &&
-        (pc.signalingState === 'stable' ||
-         peer.ignoreOffer);
+        await pc.setRemoteDescription(description);
+        await flushCandidates(peer);
 
-      const offerCollision =
-        description.type === 'offer' && !readyForOffer;
-
-      peer.ignoreOffer =
-        myId.localeCompare(from) > 0 && offerCollision;
-
-      if (peer.ignoreOffer) return;
-
-      await pc.setRemoteDescription(description);
-
-      const queued = pendingCandidates.get(from) || [];
-      pendingCandidates.delete(from);
-
-      for (const candidate of queued) {
-        try { await pc.addIceCandidate(candidate); } catch(e) {}
-      }
-
-      if (description.type === 'offer') {
-        const answer = await pc.createAnswer();
+        const answer=await pc.createAnswer();
         await pc.setLocalDescription(answer);
-        sendSignal(from,{
+
+        publishSignal(from,{
           type:'description',
           description:pc.localDescription
         });
+        return;
       }
-    } catch(e) {
-      console.error('信令处理失败',e);
+
+      if(description.type==='answer'){
+        if(!peer.isInitiator||pc.signalingState!=='have-local-offer') return;
+
+        await pc.setRemoteDescription(description);
+        await flushCandidates(peer);
+      }
+    }catch{
+      systemMessage('处理成员 '+from.slice(0,6)+' 的连接信令失败');
     }
-  }
-
-  if (packet.type === 'candidate' && packet.candidate) {
-    console.log('[对方IP]', {
-      address: packet.candidate.address,
-      port: packet.candidate.port,
-      type: packet.candidate.type,
-      protocol: packet.candidate.protocol,
-      candidate: packet.candidate.candidate
-    });
-    try {
-      if (pc.remoteDescription) {
-        try {
-          await pc.addIceCandidate(packet.candidate);
-          console.log('[ICE] 候选添加成功:', from);
-        } catch (e) {
-          console.error('[ICE] 候选添加失败:', from, e);
-        }
-      } else {
-        console.warn('[ICE] 收到候选时远端SDP尚未设置:', from);
-      
-        if (!pendingCandidates.has(from)) {
-          pendingCandidates.set(from, []);
-        }
-      
-        pendingCandidates.get(from).push(packet.candidate);
-      }
-    } catch(e) {}
-  }
-}
-
-function closePeer(id) {
-  const peer = peers.get(id);
-  if (!peer) return;
-  try { peer.dc?.close(); } catch(e) {}
-  try { peer.pc.close(); } catch(e) {}
-  peers.delete(id);
-  pendingCandidates.delete(id);
-  updateMembers();
-}
-
-function announce() {
-  if (!mqttClient || !mqttClient.connected) return;
-
-  mqttClient.publish(presenceTopic,JSON.stringify({
-    id:myId,
-    name:myName,
-    online:true,
-    time:Date.now()
-  }),{qos:0});
-
-  mqttClient.publish(base + '/discover',JSON.stringify({
-    id:myId,
-    name:myName
-  }),{qos:0});
-}
-
-function connectBroker(index) {
-  if (index >= brokers.length) {
-    setStatus('信令服务不可用');
     return;
   }
 
-  brokerIndex = index;
-  setStatus('正在连接');
-
-  try {
-    const client = mqtt.connect(brokers[index],{
-      clientId:'wc_' + myId.replace(/-/g,'').slice(0,20),
-      clean:true,
-      connectTimeout:8000,
-      reconnectPeriod:0,
-      keepalive:30
-    });
-
-    mqttClient = client;
-
-    client.on('connect',() => {
-      reconnecting = false;
-      setStatus('信令已连接');
-
-      client.subscribe([
-        presenceTopic,
-        base + '/discover',
-        signalTopic
-      ],{qos:0});
-
-      if (announceTimer) clearInterval(announceTimer);
-      announce();
-      announceTimer = setInterval(announce,12000);
-    });
-
-    client.on('message',(topic,payload) => {
-      let data;
-      try { data = JSON.parse(payload.toString()); }
-      catch(e) { return; }
-
-      if (topic === presenceTopic) {
-        if (!data.id || data.id === myId) return;
-        if (data.online === false) {
-          presence.delete(data.id);
-          closePeer(data.id);
-        } else {
-          presence.set(data.id,{
-            name:data.name || '用户',
-            time:Date.now()
-          });
-          connectPeer(data.id);
-          updateMembers();
-        }
+  if(packet.type==='candidate'&&packet.candidate){
+    try{
+      if(pc.remoteDescription){
+        await pc.addIceCandidate(packet.candidate);
+      }else{
+        if(!pendingCandidates.has(from)) pendingCandidates.set(from,[]);
+        const queue=pendingCandidates.get(from);
+        if(queue.length<256) queue.push(packet.candidate);
       }
-
-      if (topic === base + '/discover') {
-        if (!data.id || data.id === myId) return;
-        sendSignal(data.id,{
-          type:'hello',
-          id:myId
-        });
-        connectPeer(data.id);
-      }
-
-      if (topic === signalTopic) {
-        if (!data.from || !data.packet) return;
-        if (data.packet.type !== 'hello') {
-          handleSignal(data.from,data.packet);
-        }
-      }
-    });
-
-    client.on('error',() => {
-      if (client === mqttClient) {
-        client.end(true);
-        mqttClient = null;
-        if (announceTimer) clearInterval(announceTimer);
-        announceTimer = null;
-        connectBroker(index + 1);
-      }
-    });
-
-    client.on('close',() => {
-      if (client === mqttClient && !reconnecting) {
-        reconnecting = true;
-        if (announceTimer) clearInterval(announceTimer);
-        announceTimer = null;
-        setTimeout(() => {
-          if (mqttClient === client) {
-            client.end(true);
-            mqttClient = null;
-            connectBroker(index + 1);
-          }
-        },1000);
-      }
-    });
-
-  } catch(e) {
-    connectBroker(index + 1);
+    }catch{}
   }
 }
 
-function updateConnectionInfo() {
-  const all = [...peers.values()];
-
-  const connected = all.filter(p =>
-    p.dc && p.dc.readyState === 'open'
-  ).length;
-
-  const total = all.length;
-
-  $('roomSubtitle').textContent =
-    `发现 ${presence.size} 人 · 已建立 ${connected}/${total} 条直连`;
-
-  if (connected > 0) {
-    setStatus('直连正常');
-  } else if (total > 0) {
-    setStatus('正在建立直连');
-  } else {
-    setStatus('等待成员');
+function closePeer(id){
+  const peer=peers.get(id);
+  if(peer){
+    peer.closed=true;
+    try{peer.dc?.close()}catch{}
+    try{peer.pc.close()}catch{}
+    peers.delete(id);
   }
-}
-  
-function updateMembers() {
-  const list = $('memberList');
-  list.replaceChildren();
-
-  const members = [{
-    id:myId,name:myName,mine:true
-  }];
-
-  for (const [id,data] of presence) {
-    if (Date.now() - data.time < 45000) {
-      members.push({id,name:data.name});
-    }
-  }
-
-  $('memberCount').textContent = members.length + ' 人';
-
-  for (const member of members) {
-    const row = document.createElement('div');
-    row.className = 'member';
-
-    const avatar = document.createElement('div');
-    avatar.className = 'avatar';
-    avatar.textContent = member.name.slice(-2);
-
-    const info = document.createElement('div');
-    const name = document.createElement('div');
-    name.className = 'member-name';
-    name.textContent = member.mine ? member.name + '（我）' : member.name;
-
-    const state = document.createElement('div');
-    state.className = 'member-state';
-    state.textContent = member.mine ? '本设备' : '在线';
-
-    info.append(name,state);
-    const dot = document.createElement('div');
-    dot.className = 'online-dot';
-    row.append(avatar,info,dot);
-    list.appendChild(row);
-  }
-}
-
-setInterval(() => {
-  const now = Date.now();
-  for (const [id,data] of presence) {
-    if (now - data.time > 45000) {
-      presence.delete(id);
-      closePeer(id);
-    }
-  }
+  pendingCandidates.delete(id);
   updateMembers();
-},15000);
+  updateConnectionInfo();
+}
 
-$('sendBtn').onclick = () => {
-  const input = $('messageInput');
-  const text = input.value.trim();
-  if (!text) return;
-  makeMessage(text);
-  input.value = '';
+/* DataChannel */
+function setupDataChannel(peer,dc){
+  if(peer.dc&&peer.dc!==dc){
+    try{peer.dc.close()}catch{}
+  }
+
+  peer.dc=dc;
+  dc.binaryType='arraybuffer';
+
+  dc.onopen=()=>{
+    updateConnectionInfo();
+    systemMessage('已与 '+peer.id.slice(0,6)+' 建立直连');
+  };
+
+  dc.onclose=updateConnectionInfo;
+  dc.onerror=()=>systemMessage('与成员 '+peer.id.slice(0,6)+' 的数据通道发生错误');
+
+  dc.onmessage=event=>{
+    if(typeof event.data==='string'){
+      handleControlPacket(peer,event.data);
+    }else if(event.data instanceof ArrayBuffer){
+      handleFileChunk(peer,event.data);
+    }
+  };
+}
+
+function handleControlPacket(peer,raw){
+  let packet;
+  try{packet=JSON.parse(raw)}catch{return}
+  if(!packet||typeof packet!=='object') return;
+
+  if(packet.type==='chat'){
+    if(typeof packet.id!=='string'||typeof packet.text!=='string'||packet.text.length>MAX_TEXT_LENGTH) return;
+
+    addMessage({
+      id:packet.id,
+      name:packet.name||'未知用户',
+      text:packet.text,
+      mine:false,
+      time:packet.time
+    });
+    return;
+  }
+
+  if(packet.type==='file-start'){
+    receiveFileStart(peer,packet);
+    return;
+  }
+
+  if(packet.type==='file-end'){
+    receiveFileEnd(peer,packet);
+  }
+}
+
+/* 文件传输 */
+function normalizeFileId(id){
+  return String(id).replace(/-/g,'').toLowerCase();
+}
+
+function waitForBuffer(dc){
+  return new Promise(resolve=>{
+    const check=()=>{
+      if(dc.readyState!=='open'){
+        resolve(false);
+        return;
+      }
+      if(dc.bufferedAmount<=MAX_BUFFERED_AMOUNT){
+        resolve(true);
+        return;
+      }
+      setTimeout(check,50);
+    };
+    check();
+  });
+}
+
+function uuidBytes(id){
+  const hex=normalizeFileId(id);
+  if(!/^[0-9a-f]{32}$/.test(hex)) throw new Error('无效文件 ID');
+  const bytes=new Uint8Array(16);
+  for(let i=0;i<16;i++) bytes[i]=parseInt(hex.slice(i*2,i*2+2),16);
+  return bytes;
+}
+
+async function sendFile(file){
+  if(file.size>MAX_FILE_SIZE){
+    systemMessage('文件超过 20MB 限制：'+file.name);
+    return;
+  }
+
+  const targets=[...peers.values()].filter(p=>p.dc&&p.dc.readyState==='open');
+  if(!targets.length){
+    systemMessage('没有已建立的直连设备，文件未发送');
+    return;
+  }
+
+  setTransferStatus('正在读取文件：'+file.name);
+
+  try{
+    const buffer=await file.arrayBuffer();
+    const fileId=crypto.randomUUID();
+    const chunks=Math.ceil(buffer.byteLength/FILE_CHUNK_SIZE);
+
+    const metadata={
+      type:'file-start',
+      id:fileId,
+      name:file.name,
+      size:file.size,
+      mime:file.type||'application/octet-stream',
+      chunks
+    };
+
+    let completed=0;
+    for(const peer of targets){
+      if(await sendFileToPeer(peer,metadata,buffer)) completed++;
+    }
+
+    if(completed>0){
+      addMessage({
+        id:fileId,
+        name:myName,
+        text:'已发送文件：'+file.name,
+        mine:true
+      });
+      setTransferStatus(`文件发送完成：${file.name}（成功发送给 ${completed}/${targets.length} 人）`);
+    }else{
+      setTransferStatus('文件发送失败：没有成功的接收连接');
+    }
+  }catch(error){
+    setTransferStatus('文件发送失败：'+error.message);
+  }
+}
+
+async function sendFileToPeer(peer,metadata,buffer){
+  const dc=peer.dc;
+  if(!dc||dc.readyState!=='open') return false;
+
+  try{
+    dc.send(JSON.stringify(metadata));
+
+    const idBytes=uuidBytes(metadata.id);
+
+    for(let index=0;index<metadata.chunks;index++){
+      if(dc.readyState!=='open') return false;
+      if(!await waitForBuffer(dc)) return false;
+
+      const offset=index*FILE_CHUNK_SIZE;
+      const chunk=buffer.slice(offset,Math.min(offset+FILE_CHUNK_SIZE,buffer.byteLength));
+
+      // 16 字节标准化 UUID + 4 字节分块序号 + 文件数据
+      const packet=new Uint8Array(20+chunk.byteLength);
+      packet.set(idBytes,0);
+      new DataView(packet.buffer).setUint32(16,index);
+      packet.set(new Uint8Array(chunk),20);
+      dc.send(packet);
+
+      const percent=metadata.chunks
+        ?Math.round((index+1)/metadata.chunks*100)
+        :100;
+      setTransferStatus(`正在发送给 ${peer.id.slice(0,6)}：${percent}%`);
+    }
+
+    if(!await waitForBuffer(dc)) return false;
+
+    dc.send(JSON.stringify({
+      type:'file-end',
+      id:metadata.id
+    }));
+    return true;
+  }catch{
+    return false;
+  }
+}
+
+/* 文件接收：所有位置统一使用不带连字符的小写 UUID。 */
+function receiveFileStart(peer,packet){
+  if(
+    typeof packet.id!=='string'||
+    typeof packet.name!=='string'||
+    !Number.isFinite(packet.size)||
+    !Number.isInteger(packet.chunks)
+  ) return;
+
+  if(
+    packet.size<0||
+    packet.size>MAX_FILE_SIZE||
+    packet.chunks<0||
+    packet.chunks>2000
+  ) return;
+
+  const id=normalizeFileId(packet.id);
+  if(!/^[0-9a-f]{32}$/.test(id)) return;
+
+  const key=peer.id+':'+id;
+
+  incomingFiles.set(key,{
+    id,
+    name:packet.name,
+    size:packet.size,
+    mime:packet.mime||'application/octet-stream',
+    chunks:packet.chunks,
+    parts:new Array(packet.chunks),
+    received:0
+  });
+
+  setTransferStatus('正在接收文件：'+packet.name);
+}
+
+function handleFileChunk(peer,buffer){
+  if(buffer.byteLength<20) return;
+
+  const bytes=new Uint8Array(buffer,0,16);
+  const id=Array.from(bytes,value=>value.toString(16).padStart(2,'0')).join('');
+  const key=peer.id+':'+id;
+  const file=incomingFiles.get(key);
+  if(!file) return;
+
+  const index=new DataView(buffer).getUint32(16);
+  if(index>=file.chunks||file.parts[index]!==undefined) return;
+
+  const chunk=buffer.slice(20);
+  file.parts[index]=chunk;
+  file.received++;
+
+  const percent=file.chunks?Math.round(file.received/file.chunks*100):100;
+  setTransferStatus(`正在接收 ${file.name}：${percent}%`);
+}
+
+function receiveFileEnd(peer,packet){
+  if(typeof packet.id!=='string') return;
+
+  const id=normalizeFileId(packet.id);
+  const key=peer.id+':'+id;
+  const file=incomingFiles.get(key);
+  if(!file) return;
+
+  incomingFiles.delete(key);
+
+  if(file.received!==file.chunks||file.parts.some(part=>part===undefined)){
+    systemMessage(`文件接收不完整：${file.name}（收到 ${file.received}/${file.chunks} 个数据块）`);
+    return;
+  }
+
+  const blob=new Blob(file.parts,{type:file.mime});
+  if(blob.size!==file.size){
+    systemMessage('文件大小校验失败：'+file.name);
+    return;
+  }
+
+  const url=URL.createObjectURL(blob);
+
+  addMessage({
+    id:'file-'+id,
+    name:presence.get(peer.id)?.name||'成员',
+    text:'',
+    file:{name:file.name,url},
+    mine:false
+  });
+
+  setTransferStatus('文件接收完成：'+file.name);
+}
+
+/* 页面交互 */
+$('sendBtn').onclick=()=>{
+  const input=$('messageInput');
+  const text=input.value.trim();
+  if(!text) return;
+  sendChat(text);
+  input.value='';
   input.focus();
 };
 
-$('messageInput').addEventListener('keydown',e => {
-  if (e.key === 'Enter' && !e.shiftKey) {
-    e.preventDefault();
+$('messageInput').addEventListener('keydown',event=>{
+  if(event.key==='Enter'&&!event.shiftKey){
+    event.preventDefault();
     $('sendBtn').click();
   }
 });
 
-$('attachBtn').onclick = () => $('fileInput').click();
+$('attachBtn').onclick=()=>$('fileInput').click();
 
-$('fileInput').onchange = async e => {
-  const files = [...e.target.files];
-  for (const file of files) {
-    if (file.size > 20 * 1024 * 1024) {
-      systemMessage('文件超过20MB限制：' + file.name);
-      continue;
-    }
-    await sendFile(file);
-  }
-  e.target.value = '';
+$('fileInput').onchange=async event=>{
+  const files=[...event.target.files];
+  for(const file of files) await sendFile(file);
+  event.target.value='';
 };
 
-async function sendFile(file) {
-  const status = $('transferStatus');
-  status.style.display = 'block';
-  status.textContent = '正在准备文件：' + file.name;
-
-  const maxChunk = 16 * 1024;
-  const buffer = await file.arrayBuffer();
-  const id = crypto.randomUUID();
-
-  const metadata = {
-    type:'file-start',
-    id,
-    name:file.name,
-    size:file.size,
-    mime:file.type || 'application/octet-stream',
-    chunks:Math.ceil(buffer.byteLength/maxChunk)
-  };
-
-  // 文件先转换为分块消息，通过 DataChannel 发送
-  const targets = [...peers.values()].filter(
-    p => p.dc && p.dc.readyState === 'open'
-  );
-
-  if (!targets.length) {
-    status.textContent = '没有已建立的直连设备，文件未发送';
-    return;
-  }
-
-  for (const peer of targets) {
-    await sendFileToPeer(peer,metadata,buffer,maxChunk,status);
-  }
-
-  status.textContent = '文件发送完成：' + file.name;
-  addMessage({
-    id,
-    sender:myId,
-    name:myName,
-    text:'已发送文件：' + file.name,
-    mine:true
-  });
-}
-
-async function sendFileToPeer(peer,metadata,buffer,chunkSize,status) {
-  const dc = peer.dc;
-  if (!dc || dc.readyState !== 'open') return;
-
-  const waitBuffer = async () => {
-    while (dc.bufferedAmount > 1024 * 1024) {
-      await new Promise(resolve => {
-        const old = dc.onbufferedamountlow;
-        dc.bufferedAmountLowThreshold = 256 * 1024;
-        dc.onbufferedamountlow = () => {
-          dc.onbufferedamountlow = old;
-          resolve();
-        };
-      });
-    }
-  };
-
-  dc.send(JSON.stringify(metadata));
-
-  for (let offset=0;offset<buffer.byteLength;offset+=chunkSize) {
-    if (dc.readyState !== 'open') break;
-
-    await waitBuffer();
-
-    const chunk = buffer.slice(offset,offset+chunkSize);
-    const header = new Uint8Array(4);
-    new DataView(header.buffer).setUint32(0,offset);
-    const packet = new Uint8Array(4+chunk.byteLength);
-    packet.set(header,0);
-    packet.set(new Uint8Array(chunk),4);
-
-    dc.send(packet);
-
-    const percent = Math.min(100,
-      Math.round((offset+chunk.byteLength)/buffer.byteLength*100));
-    status.textContent = '发送给 ' + peer.id.slice(0,5) +
-      '：' + percent + '%';
-  }
-
-  dc.send(JSON.stringify({
-    type:'file-end',
-    id:metadata.id
-  }));
-}
-
-const incomingFiles = new Map();
-
-function handleFilePacket(peer,packet) {
-  // 二进制文件分块处理
-  if (packet instanceof ArrayBuffer) {
-    if (packet.byteLength < 4) return;
-    const view = new DataView(packet);
-    const offset = view.getUint32(0);
-    const file = incomingFiles.get(peer.id);
-    if (!file) return;
-    file.parts.set(offset,packet.slice(4));
-    return;
-  }
-}
-
-$('emojiBtn').onclick = () => {
-  const input = $('messageInput');
-  input.value += ' 😊';
+$('emojiBtn').onclick=()=>{
+  const input=$('messageInput');
+  input.value+=' 😊';
   input.focus();
 };
 
-$('copyRoomBtn').onclick = async () => {
-  await navigator.clipboard.writeText(room);
-  systemMessage('房间号已复制');
-};
+async function copyText(text){
+  try{
+    if(navigator.clipboard&&window.isSecureContext){
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
 
-$('shareBtn').onclick = async () => {
-  const url = location.origin + location.pathname +
-    '?room=' + encodeURIComponent(room);
-
-  if (navigator.share) {
-    try { await navigator.share({title:'微聊',url}); }
-    catch(e) {}
-  } else {
-    await navigator.clipboard.writeText(url);
-    systemMessage('邀请链接已复制');
+    const textarea=document.createElement('textarea');
+    textarea.value=text;
+    textarea.style.position='fixed';
+    textarea.style.opacity='0';
+    document.body.appendChild(textarea);
+    textarea.select();
+    const success=document.execCommand('copy');
+    textarea.remove();
+    return success;
+  }catch{
+    return false;
   }
+}
+
+$('copyRoomBtn').onclick=async()=>{
+  const success=await copyText(room);
+  systemMessage(success?'房间号已复制':'复制失败，请手动复制房间号');
 };
 
-$('membersBtn').onclick = () => {
-  const names = [...presence.values()].map(p=>p.name);
-  alert('在线成员：\n' + [myName,...names].join('\n'));
+$('shareBtn').onclick=async()=>{
+  const url=location.origin+location.pathname+'?room='+encodeURIComponent(room);
+
+  if(navigator.share){
+    try{
+      await navigator.share({title:'微聊',url});
+      return;
+    }catch(error){
+      if(error.name==='AbortError') return;
+    }
+  }
+
+  const success=await copyText(url);
+  systemMessage(success?'邀请链接已复制':'复制失败');
 };
 
-window.addEventListener('beforeunload',() => {
-  if (mqttClient && mqttClient.connected) {
+$('membersBtn').onclick=()=>{
+  const names=[...presence.values()].map(item=>item.name);
+  alert('在线成员：\n'+[myName,...names].join('\n'));
+};
+
+/* 在线成员过期清理 */
+presenceTimer=setInterval(()=>{
+  const now=Date.now();
+
+  for(const [id,data] of presence){
+    if(now-data.time>PRESENCE_TIMEOUT){
+      presence.delete(id);
+      closePeer(id);
+    }
+  }
+
+  updateMembers();
+  updateConnectionInfo();
+},15000);
+
+/* 离开页面 */
+window.addEventListener('beforeunload',()=>{
+  manuallyClosing=true;
+
+  if(mqttClient&&mqttClient.connected){
     mqttClient.publish(presenceTopic,JSON.stringify({
-      id:myId,
-      name:myName,
-      online:false
+      id:myId,name:myName,online:false
     }),{qos:0});
   }
-  if (announceTimer) clearInterval(announceTimer);
-  for (const id of peers.keys()) closePeer(id);
+
+  if(announceTimer) clearInterval(announceTimer);
+  if(presenceTimer) clearInterval(presenceTimer);
+  if(brokerRetryTimer) clearTimeout(brokerRetryTimer);
+
+  for(const id of [...peers.keys()]) closePeer(id);
+
+  if(mqttClient){
+    try{mqttClient.end(true)}catch{}
+  }
 });
 
-connectBroker(0);
+/* 启动 */
 updateMembers();
+connectBroker(0);
 
 })();
 </script>
