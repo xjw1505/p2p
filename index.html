@@ -512,9 +512,19 @@ function connectPeer(id) {
 
   pc.onicecandidate = event => {
     if (event.candidate) {
+      const c = event.candidate;
+  
+      console.log('[本机IP]', {
+        address: c.address,
+        port: c.port,
+        type: c.type,
+        protocol: c.protocol,
+        candidate: c.candidate
+      });
+  
       sendSignal(id, {
         type: 'candidate',
-        candidate: event.candidate.toJSON()
+        candidate: c.toJSON()
       });
     }
   };
@@ -686,6 +696,13 @@ async function handleSignal(from,packet) {
   }
 
   if (packet.type === 'candidate' && packet.candidate) {
+    console.log('[对方IP]', {
+      address: packet.candidate.address,
+      port: packet.candidate.port,
+      type: packet.candidate.type,
+      protocol: packet.candidate.protocol,
+      candidate: packet.candidate.candidate
+    });
     try {
       if (pc.remoteDescription) {
         await pc.addIceCandidate(packet.candidate);
