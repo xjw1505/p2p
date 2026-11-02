@@ -707,10 +707,19 @@ async function handleSignal(from,packet) {
     });
     try {
       if (pc.remoteDescription) {
-        await pc.addIceCandidate(packet.candidate);
+        try {
+          await pc.addIceCandidate(packet.candidate);
+          console.log('[ICE] 候选添加成功:', from);
+        } catch (e) {
+          console.error('[ICE] 候选添加失败:', from, e);
+        }
       } else {
-        if (!pendingCandidates.has(from))
-          pendingCandidates.set(from,[]);
+        console.warn('[ICE] 收到候选时远端SDP尚未设置:', from);
+      
+        if (!pendingCandidates.has(from)) {
+          pendingCandidates.set(from, []);
+        }
+      
         pendingCandidates.get(from).push(packet.candidate);
       }
     } catch(e) {}
