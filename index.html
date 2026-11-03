@@ -3,7 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#101923">
+  <meta name="theme-color" content="#eaf7f5">
+  <meta name="color-scheme" content="light">
   <title>群聊 · ROOM</title>
   <link rel="stylesheet" href="style.css">
   <script src="config.js" defer></script>
@@ -12,52 +13,74 @@
 <body>
   <div class="app-shell">
     <aside class="sidebar">
-      <div class="brand"><div class="brand-mark">R</div><div><strong>ROOM</strong><span>LIVE MESSAGING</span></div></div>
-      <div class="side-label">WORKSPACE</div>
-      <div class="room-card active">
-        <div class="room-icon">✳</div>
-        <div class="room-copy"><strong>所有人</strong><span>实时群聊</span></div>
-        <span class="room-dot"></span>
+      <div class="brand">
+        <div class="brand-mark">R</div>
+        <div><strong>ROOM</strong><span>LIVE MESSAGING</span></div>
       </div>
-      <div class="side-bottom">
-        <div class="privacy-mark">◈</div>
-        <div><strong>仅在线传输</strong><span>服务器不保存消息</span></div>
+
+      <div class="room-card active">
+        <div class="room-icon" aria-hidden="true"></div>
+        <div class="room-copy"><strong>所有人</strong><span>实时群聊</span></div>
+        <span class="room-dot" aria-hidden="true"></span>
       </div>
     </aside>
 
     <main class="chat-panel">
       <header class="topbar">
         <div class="room-heading">
-          <div class="room-icon large">✳</div>
-          <div><h1>所有人</h1><div class="subtitle"><span id="connectionDot" class="connection-dot"></span><span id="connectionText">正在自动连接</span><span class="separator">·</span><span id="onlineCount">0 人在线</span></div></div>
+          <div class="room-icon large" aria-hidden="true"></div>
+          <div>
+            <h1>所有人</h1>
+            <div class="subtitle">
+              <span id="connectionDot" class="connection-dot"></span>
+              <span id="connectionText">正在自动连接</span>
+              <span class="separator">·</span>
+              <span id="onlineCount">0 人在线</span>
+            </div>
+          </div>
         </div>
+
         <div class="top-actions">
-          <button id="clearHistoryBtn" class="icon-button" type="button" title="清空本机聊天记录" aria-label="清空本机聊天记录">⌫</button>
+          <button id="clearHistoryBtn" class="icon-button" type="button" title="清空本机聊天记录" aria-label="清空本机聊天记录">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M4 7h16M9 7V4h6v3m3 0-.8 13H6.8L6 7m4 4v5m4-5v5" />
+            </svg>
+          </button>
           <div class="avatar self-avatar" id="myAvatar" title="自动分配的访客标识">?</div>
         </div>
       </header>
 
       <section id="chatFeed" class="chat-feed" aria-live="polite">
         <div id="welcomeCard" class="welcome-card">
-          <div class="welcome-symbol">✳</div>
           <h2>打开即加入，所有人都在这里。</h2>
-          <p>无需注册、无需昵称或密码。发送文字、图片或文件，当前在线的所有成员都能收到。</p>
-          <div class="welcome-tags"><span>LIVE ONLY</span><span>NO SERVER HISTORY</span><span>LOCAL ARCHIVE</span></div>
+          <p>无需注册或设置昵称。发送文字、图片和文件，当前在线的成员都能收到。</p>
         </div>
       </section>
 
-      <div id="uploadStatus" class="upload-status" hidden><div class="upload-track"><div id="uploadProgress" class="upload-progress"></div></div><span id="uploadLabel">正在传输文件…</span></div>
+      <div id="uploadStatus" class="upload-status" hidden>
+        <div class="upload-track"><div id="uploadProgress" class="upload-progress"></div></div>
+        <span id="uploadLabel">正在传输文件…</span>
+      </div>
 
       <footer class="composer-wrap">
         <div class="composer-tools">
-          <button id="attachBtn" class="tool-button" type="button" title="发送图片或文件" aria-label="发送图片或文件">＋</button>
+          <button id="attachBtn" class="tool-button" type="button" title="发送图片或文件" aria-label="发送图片或文件">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true">
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+          </button>
           <input id="fileInput" type="file" multiple hidden>
-          <span class="tool-hint">支持图片、文档及其他文件，单文件最大 64 MB</span>
-          <span class="local-hint"><span class="local-dot"></span>聊天记录仅保存在本机</span>
+          <span class="tool-hint">图片与文件 · 单个最大 64 MB</span>
         </div>
+
         <div class="composer">
           <textarea id="messageInput" rows="1" maxlength="8000" placeholder="发送消息…（Enter 发送，Shift + Enter 换行）" disabled></textarea>
-          <button id="sendBtn" class="send-button" type="button" disabled><span>发送</span><b>↗</b></button>
+          <button id="sendBtn" class="send-button" type="button" disabled>
+            <span>发送</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M7 17 17 7M8 7h9v9" />
+            </svg>
+          </button>
         </div>
       </footer>
     </main>
