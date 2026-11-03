@@ -9,8 +9,7 @@
 
   const $ = (id) => document.getElementById(id);
   const ui = {
-    feed: $('chatFeed'), welcome: $('welcomeCard'), overlay: $('authOverlay'), joinForm: $('joinForm'),
-    name: $('nameInput'), password: $('passwordInput'), joinBtn: $('joinBtn'), joinError: $('joinError'),
+    feed: $('chatFeed'), welcome: $('welcomeCard'),
     connectionDot: $('connectionDot'), connectionText: $('connectionText'), onlineCount: $('onlineCount'),
     avatar: $('myAvatar'), input: $('messageInput'), send: $('sendBtn'), attach: $('attachBtn'), fileInput: $('fileInput'),
     uploadStatus: $('uploadStatus'), uploadProgress: $('uploadProgress'), uploadLabel: $('uploadLabel'),
@@ -21,8 +20,7 @@
   // for a previous connection. Chat history is local; sessions are not resumed.
   let clientId = makeId();
 
-  let nickname = '';
-  let chatKey = '';
+  let nickname = 'Guest';
   let onlineMembers = [];
   let polling = false;
   let connected = false;
@@ -102,7 +100,8 @@
   }
 
   function firstLetter(value) {
-    const chars = Array.from(String(value || '?').trim());
+    const part = String(value || '?').trim().split('-').pop();
+    const chars = Array.from(part || '?');
     return chars.length ? chars[0].toUpperCase() : '?';
   }
 
@@ -202,7 +201,6 @@
   async function api(path, options = {}) {
     if (!API_BASE) throw new Error('请先在 config.js 中设置 API_BASE');
     const headers = new Headers(options.headers || {});
-    headers.set('X-Chat-Key', chatKey);
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), options.timeout || 28000);
     try {
@@ -244,17 +242,27 @@
   }
 
   async function joinRoom() {
-    if (!API_BASE) throw new Error('请先设置 config.js 中的 API_BASE');
-    await postForm('/api/join', { id: clientId, name: nickname });
+    if (!API_BASE) throw new Error('请先在 config.js 中设置 API_BASE');
+    const data = await postForm('/api/join', { id: clientId });
+    nickname = data.name || 'Guest';
     ui.avatar.textContent = firstLetter(nickname);
-    ui.overlay.classList.add('hidden');
     setConnection(true, '已连接');
-    if (!polling) pollLoop();
   }
 
   async function pollLoop() {
+    if (polling) return;
     polling = true;
     while (polling) {
+      if (!connected) {
+        clientId = makeId();
+        try {
+          await joinRoom();
+        } catch (error) {
+          setConnection(false, '连接失败，正在重试');
+          await sleep(2500);
+          continue;
+        }
+      }
       try {
         const data = await api('/api/poll?id=' + encodeURIComponent(clientId), { timeout: 26000 });
         setConnection(true, '已连接');
@@ -262,17 +270,8 @@
         for (const event of (data.events || [])) await handleEvent(event);
       } catch (error) {
         setConnection(false, '连接中断，正在重试');
+        // A new session prevents messages sent while disconnected from being replayed.
         await sleep(1800);
-        try {
-          // Rejoin with a new session id. Messages sent during the disconnect
-          // are deliberately not replayed to this new session.
-          const nextClientId = makeId();
-          await postForm('/api/join', { id: nextClientId, name: nickname });
-          clientId = nextClientId;
-          setConnection(true, '已连接');
-        } catch (joinError) {
-          // The next loop iteration will retry after the short delay.
-        }
       }
     }
   }
@@ -470,28 +469,6 @@
     ui.input.style.height = Math.min(ui.input.scrollHeight, 130) + 'px';
   }
 
-  ui.joinForm.addEventListener('submit', async (event) => {
-    event.preventDefault();
-    nickname = ui.name.value.trim() || 'Guest';
-    chatKey = ui.password.value;
-    if (chatKey.length < 24) {
-      ui.joinError.textContent = '群聊密码长度至少为 24 个字符';
-      return;
-    }
-    ui.joinBtn.disabled = true;
-    ui.joinError.textContent = '';
-    try {
-      localStorage.setItem('roomNickname', nickname);
-      localStorage.setItem('roomChatKey', chatKey);
-      await joinRoom();
-      showToast('已进入群聊');
-    } catch (error) {
-      ui.joinError.textContent = error.message;
-    } finally {
-      ui.joinBtn.disabled = false;
-    }
-  });
-
   ui.send.addEventListener('click', sendText);
   ui.input.addEventListener('input', resizeInput);
   ui.input.addEventListener('keydown', (event) => {
@@ -530,23 +507,8 @@
       showToast('本地记录功能不可用：' + error.message);
     }
 
-    const savedName = localStorage.getItem('roomNickname') || '';
-    const savedKey = localStorage.getItem('roomChatKey') || '';
-    ui.name.value = savedName;
-    if (savedName && savedKey) {
-      nickname = savedName;
-      chatKey = savedKey;
-      try {
-        await joinRoom();
-      } catch (error) {
-        ui.overlay.classList.remove('hidden');
-        ui.joinError.textContent = '自动连接失败：' + error.message;
-        setConnection(false, '未连接');
-      }
-    } else {
-      ui.overlay.classList.remove('hidden');
-      setConnection(false, '未连接');
-    }
+    setConnection(false, '正在加入公共群聊…');
+    pollLoop();
   }
 
   window.addEventListener('beforeunload', () => { polling = false; });

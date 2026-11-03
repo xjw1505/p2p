@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#101923">
-  <title>Room · Group Chat</title>
+  <title>群聊 · ROOM</title>
   <link rel="stylesheet" href="style.css">
   <script src="config.js" defer></script>
   <script src="app.js" defer></script>
@@ -29,19 +29,19 @@
       <header class="topbar">
         <div class="room-heading">
           <div class="room-icon large">✳</div>
-          <div><h1>所有人</h1><div class="subtitle"><span id="connectionDot" class="connection-dot"></span><span id="connectionText">等待连接</span><span class="separator">·</span><span id="onlineCount">0 人在线</span></div></div>
+          <div><h1>所有人</h1><div class="subtitle"><span id="connectionDot" class="connection-dot"></span><span id="connectionText">正在自动连接</span><span class="separator">·</span><span id="onlineCount">0 人在线</span></div></div>
         </div>
         <div class="top-actions">
           <button id="clearHistoryBtn" class="icon-button" type="button" title="清空本机聊天记录" aria-label="清空本机聊天记录">⌫</button>
-          <div class="avatar self-avatar" id="myAvatar">?</div>
+          <div class="avatar self-avatar" id="myAvatar" title="自动分配的访客标识">?</div>
         </div>
       </header>
 
       <section id="chatFeed" class="chat-feed" aria-live="polite">
         <div id="welcomeCard" class="welcome-card">
           <div class="welcome-symbol">✳</div>
-          <h2>一个房间，所有人都在这里。</h2>
-          <p>发送文字、图片或文件。只有当前在线的成员能够收到新消息。</p>
+          <h2>打开即加入，所有人都在这里。</h2>
+          <p>无需注册、无需昵称或密码。发送文字、图片或文件，当前在线的所有成员都能收到。</p>
           <div class="welcome-tags"><span>LIVE ONLY</span><span>NO SERVER HISTORY</span><span>LOCAL ARCHIVE</span></div>
         </div>
       </section>
@@ -61,22 +61,6 @@
         </div>
       </footer>
     </main>
-  </div>
-
-  <div id="authOverlay" class="overlay">
-    <form id="joinForm" class="join-card">
-      <div class="join-logo">R</div>
-      <div class="eyebrow">PRIVATE LIVE ROOM</div>
-      <h2>加入群聊</h2>
-      <p>输入昵称和群聊密码即可进入。相同密码的在线用户会进入同一个群聊。</p>
-      <label for="nameInput">你的昵称</label>
-      <input id="nameInput" maxlength="20" autocomplete="nickname" placeholder="例如：Guest" required>
-      <label for="passwordInput">群聊密码</label>
-      <input id="passwordInput" type="password" autocomplete="current-password" placeholder="输入群聊共享密码" required>
-      <button id="joinBtn" class="join-button" type="submit">进入群聊 <span>↗</span></button>
-      <div id="joinError" class="join-error" role="alert"></div>
-      <div class="join-foot">消息实时转发 · 文件不在服务器留存</div>
-    </form>
   </div>
 
   <div id="toast" class="toast" role="status"></div>
