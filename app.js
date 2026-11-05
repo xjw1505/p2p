@@ -8,8 +8,10 @@
     'https://esm.sh/trystero@0.26.0',
     'https://esm.run/trystero@0.26.0'
   ];
-  const MAX_FILE_SIZE = 64 * 1024 * 1024;
-  const MAX_RECEIVE_BYTES = 128 * 1024 * 1024;
+  // Trystero assembles each incoming file in memory. Remove the old 64 MiB
+  // application cap and raise the room receive budget; actual limits are the
+  // browser's available memory and storage quota.
+  const MAX_RECEIVE_BYTES = Number.MAX_SAFE_INTEGER;
   const DB_NAME = 'room-live-chat';
   const DB_VERSION = 1;
 
@@ -261,12 +263,13 @@
     return String(peerId) + ':' + String((metadata && metadata.transferId) || 'unknown');
   }
 
-  async function dataToArrayBuffer(data) {
-    if (data instanceof ArrayBuffer) return data;
-    if (ArrayBuffer.isView(data)) {
-      return data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength);
+  function dataToBlob(data, mime) {
+    if (data instanceof Blob) {
+      return data.type === mime ? data : data.slice(0, data.size, mime);
     }
-    if (data instanceof Blob) return data.arrayBuffer();
+    if (data instanceof ArrayBuffer || ArrayBuffer.isView(data)) {
+      return new Blob([data], { type: mime });
+    }
     throw new Error('收到未知的文件数据格式');
   }
 
@@ -299,11 +302,6 @@
       }
     };
 
-    fileAction.onReceive = ({ byteLength, metadata }) => {
-      const size = Number(metadata && metadata.size) || Number(byteLength) || 0;
-      return size > 0 && size <= MAX_FILE_SIZE;
-    };
-
     fileAction.onReceiveProgress = (percent, context) => {
       const metadata = context.metadata || {};
       addTransferNotice(transferKey(context.peerId, metadata), metadata.name, percent);
@@ -314,10 +312,8 @@
       const key = transferKey(context.peerId, metadata);
       removeTransferNotice(key);
       try {
-        const buffer = await dataToArrayBuffer(data);
         const mime = String(metadata.mime || metadata.type || 'application/octet-stream');
-        const blob = new Blob([buffer], { type: mime });
-        if (blob.size > MAX_FILE_SIZE) throw new Error('文件超过 64 MB 限制');
+        const blob = dataToBlob(data, mime);
         const record = {
           id: String(metadata.transferId || makeId()),
           type: 'file',
@@ -328,7 +324,11 @@
           time: Number(metadata.time) || Date.now(),
           mine: false
         };
-        await saveRecord(record);
+        try {
+          await saveRecord(record);
+        } catch (storageError) {
+          showToast('文件已接收，但本机存储空间不足，刷新后可能不会保留这条文件记录');
+        }
         renderMessage(record);
       } catch (error) {
         showToast('文件接收失败：' + error.message);
@@ -425,8 +425,6 @@
 
   async function sendFile(file) {
     if (!connected || !fileAction) throw new Error('当前没有 P2P 对端');
-    if (file.size <= 0) throw new Error('不能发送空文件');
-    if (file.size > MAX_FILE_SIZE) throw new Error('文件超过 64 MB 限制');
     if (peerIds.size === 0) throw new Error('目前没有其他在线成员');
 
     const transferId = makeId();
@@ -465,12 +463,92 @@
       time: Date.now(),
       mine: true
     };
-    await saveRecord(record);
+    try {
+      await saveRecord(record);
+    } catch (error) {
+      showToast('文件已发送，但本机存储空间不足，刷新后可能不会保留这条文件记录');
+    }
     renderMessage(record);
     ui.uploadProgress.style.width = '100%';
     ui.uploadLabel.textContent = 'P2P 发送完成：' + file.name;
     await sleep(600);
     ui.uploadStatus.hidden = true;
+  }
+
+  async function sendFiles(fileList) {
+    const files = Array.from(fileList || []).filter((file) => file && typeof file.slice === 'function');
+    for (const file of files) {
+      try {
+        await sendFile(file);
+      } catch (error) {
+        ui.uploadStatus.hidden = true;
+        showToast(file.name + '：' + error.message);
+      }
+    }
+  }
+
+  function installGlobalDrop() {
+    const overlay = document.createElement('div');
+    overlay.style.cssText = [
+      'position:fixed', 'inset:0', 'z-index:2147483647', 'display:none',
+      'align-items:center', 'justify-content:center', 'padding:24px',
+      'box-sizing:border-box', 'background:rgba(30,75,76,.18)',
+      'backdrop-filter:blur(5px)', '-webkit-backdrop-filter:blur(5px)',
+      'pointer-events:none'
+    ].join(';');
+
+    const panel = document.createElement('div');
+    panel.textContent = '松开鼠标，发送文件';
+    panel.style.cssText = [
+      'padding:28px 40px', 'border:3px dashed #269e91', 'border-radius:20px',
+      'background:rgba(240,255,251,.96)', 'color:#176f68',
+      'font:600 20px/1.5 system-ui,sans-serif', 'text-align:center',
+      'box-shadow:0 12px 40px rgba(0,0,0,.14)'
+    ].join(';');
+    overlay.appendChild(panel);
+    document.body.appendChild(overlay);
+
+    let dragDepth = 0;
+    const isFileDrag = (event) => {
+      const transfer = event.dataTransfer;
+      if (!transfer) return false;
+      const types = Array.from(transfer.types || []);
+      if (types.includes('Files')) return true;
+      return Array.from(transfer.items || []).some((item) => item.kind === 'file');
+    };
+    const show = () => { overlay.style.display = 'flex'; };
+    const hide = () => {
+      dragDepth = 0;
+      overlay.style.display = 'none';
+    };
+
+    window.addEventListener('dragenter', (event) => {
+      if (!isFileDrag(event)) return;
+      event.preventDefault();
+      dragDepth++;
+      show();
+    });
+
+    window.addEventListener('dragover', (event) => {
+      if (!isFileDrag(event)) return;
+      event.preventDefault();
+      if (event.dataTransfer) event.dataTransfer.dropEffect = 'copy';
+      show();
+    });
+
+    window.addEventListener('dragleave', (event) => {
+      if (!isFileDrag(event)) return;
+      dragDepth = Math.max(0, dragDepth - 1);
+      if (dragDepth === 0) overlay.style.display = 'none';
+    });
+
+    window.addEventListener('drop', (event) => {
+      if (!isFileDrag(event)) return;
+      event.preventDefault();
+      const files = event.dataTransfer ? event.dataTransfer.files : null;
+      hide();
+      if (files && files.length) sendFiles(files);
+    });
   }
 
   function sleep(ms) {
@@ -492,19 +570,13 @@
   });
 
   ui.attach.addEventListener('click', () => ui.fileInput.click());
-  ui.fileInput.addEventListener('change', async () => {
+  ui.fileInput.addEventListener('change', () => {
     const files = Array.from(ui.fileInput.files || []);
     ui.fileInput.value = '';
-    for (const file of files) {
-      try {
-        await sendFile(file);
-      } catch (error) {
-        ui.uploadStatus.hidden = true;
-        showToast(file.name + '：' + error.message);
-        break;
-      }
-    }
+    sendFiles(files);
   });
+
+  installGlobalDrop();
 
   ui.clear.addEventListener('click', async () => {
     if (!window.confirm('确定清空这台设备保存的全部聊天记录和文件吗？')) return;
