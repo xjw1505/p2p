@@ -10,7 +10,6 @@
   <link rel="icon" type="image/png" sizes="192x192" href="./favicon.ico">
   <link rel="apple-touch-icon" href="./favicon.ico">
   <link rel="stylesheet" href="style.css">
-  <script src="config.js" defer></script>
   <script src="app.js" defer></script>
 </head>
 <body>
@@ -36,9 +35,9 @@
             <h1>所有人</h1>
             <div class="subtitle">
               <span id="connectionDot" class="connection-dot"></span>
-              <span id="connectionText">正在自动连接</span>
+              <span id="connectionText">正在连接公共信令</span>
               <span class="separator">·</span>
-              <span id="onlineCount">0 人在线</span>
+              <span id="onlineCount">1 人在线</span>
             </div>
           </div>
         </div>
@@ -62,7 +61,7 @@
 
       <div id="uploadStatus" class="upload-status" hidden>
         <div class="upload-track"><div id="uploadProgress" class="upload-progress"></div></div>
-        <span id="uploadLabel">正在传输文件…</span>
+        <span id="uploadLabel">正在 P2P 传输文件…</span>
       </div>
 
       <footer class="composer-wrap">
@@ -73,7 +72,7 @@
             </svg>
           </button>
           <input id="fileInput" type="file" multiple hidden>
-          <span class="tool-hint">图片与文件 · 单个最大 64 MB</span>
+          <span class="tool-hint">图片与文件 · 单个最大 64 MB · P2P 直传</span>
         </div>
 
         <div class="composer">

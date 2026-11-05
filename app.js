@@ -1,9 +1,15 @@
 (() => {
   'use strict';
 
-  const API_BASE = String((window.CHAT_CONFIG && window.CHAT_CONFIG.API_BASE) || '').replace(/\/$/, '');
-  const CHUNK_SIZE = 24 * 1024;
+  const APP_ID = 'xjw1505.p2p';
+  const ROOM_ID = 'xjw1505-global-room-v1';
+  const TRYSTERO_URLS = [
+    'https://cdn.jsdelivr.net/npm/trystero@0.26.0/+esm',
+    'https://esm.sh/trystero@0.26.0',
+    'https://esm.run/trystero@0.26.0'
+  ];
   const MAX_FILE_SIZE = 64 * 1024 * 1024;
+  const MAX_RECEIVE_BYTES = 128 * 1024 * 1024;
   const DB_NAME = 'room-live-chat';
   const DB_VERSION = 1;
 
@@ -16,20 +22,25 @@
     toast: $('toast'), clear: $('clearHistoryBtn')
   };
 
-  // A fresh session id prevents a later page visit from receiving messages queued
-  // for a previous connection. Chat history is local; sessions are not resumed.
-  let clientId = makeId();
-
   let nickname = 'Guest';
-  let onlineMembers = [];
-  let polling = false;
+  let room = null;
+  let roomReady = false;
   let connected = false;
   let toastTimer = null;
-  const transfers = new Map();
+  let profileAction = null;
+  let messageAction = null;
+  let fileAction = null;
+
+  const peerIds = new Set();
+  const peerNames = new Map();
+  const renderedIds = new Set();
+  const transferNotices = new Map();
   const dbPromise = openDatabase();
 
   function makeId() {
-    if (window.crypto && typeof window.crypto.randomUUID === 'function') return window.crypto.randomUUID().replace(/-/g, '');
+    if (window.crypto && typeof window.crypto.randomUUID === 'function') {
+      return window.crypto.randomUUID().replace(/-/g, '');
+    }
     return 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'.replace(/[x]/g, () => Math.floor(Math.random() * 16).toString(16));
   }
 
@@ -42,7 +53,9 @@
       const request = indexedDB.open(DB_NAME, DB_VERSION);
       request.onupgradeneeded = () => {
         const db = request.result;
-        if (!db.objectStoreNames.contains('messages')) db.createObjectStore('messages', { keyPath: 'id' });
+        if (!db.objectStoreNames.contains('messages')) {
+          db.createObjectStore('messages', { keyPath: 'id' });
+        }
       };
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error || new Error('Cannot open local message database'));
@@ -55,7 +68,12 @@
       const transaction = db.transaction('messages', mode);
       const store = transaction.objectStore('messages');
       let request;
-      try { request = callback(store); } catch (error) { reject(error); return; }
+      try {
+        request = callback(store);
+      } catch (error) {
+        reject(error);
+        return;
+      }
       transaction.oncomplete = () => resolve(request ? request.result : undefined);
       transaction.onerror = () => reject(transaction.error || new Error('Local database error'));
       transaction.onabort = () => reject(transaction.error || new Error('Local database transaction aborted'));
@@ -81,11 +99,23 @@
     ui.attach.disabled = !isOnline;
   }
 
+  function refreshConnection() {
+    const count = peerIds.size;
+    ui.onlineCount.textContent = (count + 1) + ' 人在线';
+    if (count > 0) {
+      setConnection(true, 'P2P 已连接');
+    } else if (roomReady) {
+      setConnection(false, '已加入房间，等待其他成员…');
+    } else {
+      setConnection(false, '正在连接公共信令…');
+    }
+  }
+
   function showToast(message) {
     ui.toast.textContent = message;
     ui.toast.classList.add('show');
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => ui.toast.classList.remove('show'), 2600);
+    toastTimer = setTimeout(() => ui.toast.classList.remove('show'), 3000);
   }
 
   function formatTime(value) {
@@ -106,7 +136,9 @@
   }
 
   function renderMessage(record) {
-    if (!record || !record.id) return;
+    if (!record || !record.id || renderedIds.has(record.id)) return;
+    renderedIds.add(record.id);
+
     if (record.type === 'system') {
       const system = document.createElement('div');
       system.className = 'system-message';
@@ -193,190 +225,192 @@
     requestAnimationFrame(() => { ui.feed.scrollTop = ui.feed.scrollHeight; });
   }
 
-  function updateMembers(members) {
-    onlineMembers = Array.isArray(members) ? members : [];
-    ui.onlineCount.textContent = onlineMembers.length + ' 人在线';
+  function updateOnlineMembers() {
+    ui.onlineCount.textContent = (peerIds.size + 1) + ' 人在线';
   }
 
-  async function api(path, options = {}) {
-    if (!API_BASE) throw new Error('请先在 config.js 中设置 API_BASE');
-    const headers = new Headers(options.headers || {});
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), options.timeout || 28000);
-    try {
-      const response = await fetch(API_BASE + path, {
-        method: options.method || 'GET',
-        headers,
-        body: options.body,
-        cache: 'no-store',
-        mode: 'cors',
-        credentials: 'omit',
-        signal: controller.signal
-      });
-      const text = await response.text();
-      let data = {};
-      try { data = text ? JSON.parse(text) : {}; } catch (_) { data = { error: text || 'Invalid server response' }; }
-      if (!response.ok) {
-        const error = new Error(data.error || ('HTTP ' + response.status));
-        error.status = response.status;
-        throw error;
-      }
-      return data;
-    } finally {
-      clearTimeout(timeout);
+  function addTransferNotice(key, name, percent) {
+    let noticeState = transferNotices.get(key);
+    if (!noticeState) {
+      const notice = document.createElement('div');
+      notice.className = 'transfer-notice';
+      const label = document.createElement('span');
+      label.textContent = (name || '文件') + ' 正在接收';
+      const progress = document.createElement('progress');
+      progress.max = 100;
+      progress.value = 0;
+      notice.append(label, progress);
+      ui.feed.appendChild(notice);
+      noticeState = { notice, label, progress };
+      transferNotices.set(key, noticeState);
+      ui.welcome.hidden = true;
+      scrollToBottom();
     }
+    noticeState.progress.value = Math.max(0, Math.min(100, Math.round(percent * 100)));
+    noticeState.label.textContent = (name || '文件') + ' 正在接收 ' + noticeState.progress.value + '%';
   }
 
-  function formBody(values) {
-    const body = new URLSearchParams();
-    Object.keys(values).forEach((key) => body.set(key, String(values[key])));
-    return body.toString();
+  function removeTransferNotice(key) {
+    const noticeState = transferNotices.get(key);
+    if (!noticeState) return;
+    noticeState.notice.remove();
+    transferNotices.delete(key);
   }
 
-  async function postForm(path, values) {
-    return api(path, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
-      body: formBody(values)
-    });
+  function transferKey(peerId, metadata) {
+    return String(peerId) + ':' + String((metadata && metadata.transferId) || 'unknown');
   }
 
-  async function joinRoom() {
-    if (!API_BASE) throw new Error('请先在 config.js 中设置 API_BASE');
-    const data = await postForm('/api/join', { id: clientId });
-    nickname = data.name || 'Guest';
-    ui.avatar.textContent = firstLetter(nickname);
-    setConnection(true, '已连接');
+  async function dataToArrayBuffer(data) {
+    if (data instanceof ArrayBuffer) return data;
+    if (ArrayBuffer.isView(data)) {
+      return data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength);
+    }
+    if (data instanceof Blob) return data.arrayBuffer();
+    throw new Error('收到未知的文件数据格式');
   }
 
-  async function pollLoop() {
-    if (polling) return;
-    polling = true;
-    while (polling) {
-      if (!connected) {
-        clientId = makeId();
-        try {
-          await joinRoom();
-        } catch (error) {
-          setConnection(false, '连接失败，正在重试');
-          await sleep(2500);
-          continue;
-        }
-      }
+  function setupActions() {
+    profileAction = room.makeAction('profile-v1');
+    messageAction = room.makeAction('chat-message-v1');
+    fileAction = room.makeAction('chat-file-v1');
+
+    profileAction.onMessage = (data, context) => {
+      if (!context || !context.peerId || !data || typeof data.name !== 'string') return;
+      peerNames.set(context.peerId, data.name.slice(0, 32));
+    };
+
+    messageAction.onMessage = async (data, context) => {
+      if (!data || typeof data !== 'object' || !data.id || typeof data.text !== 'string') return;
+      if (data.text.length > 8000 || renderedIds.has(data.id)) return;
+      const record = {
+        id: String(data.id),
+        type: 'text',
+        name: String(data.name || peerNames.get(context.peerId) || 'Guest').slice(0, 32),
+        text: data.text,
+        time: Number(data.time) || Date.now(),
+        mine: false
+      };
       try {
-        const data = await api('/api/poll?id=' + encodeURIComponent(clientId), { timeout: 26000 });
-        setConnection(true, '已连接');
-        updateMembers(data.online);
-        for (const event of (data.events || [])) await handleEvent(event);
+        await saveRecord(record);
+        renderMessage(record);
       } catch (error) {
-        setConnection(false, '连接中断，正在重试');
-        // A new session prevents messages sent while disconnected from being replayed.
-        await sleep(1800);
+        showToast('保存消息失败：' + error.message);
+      }
+    };
+
+    fileAction.onReceive = ({ byteLength, metadata }) => {
+      const size = Number(metadata && metadata.size) || Number(byteLength) || 0;
+      return size > 0 && size <= MAX_FILE_SIZE;
+    };
+
+    fileAction.onReceiveProgress = (percent, context) => {
+      const metadata = context.metadata || {};
+      addTransferNotice(transferKey(context.peerId, metadata), metadata.name, percent);
+    };
+
+    fileAction.onMessage = async (data, context) => {
+      const metadata = context.metadata || {};
+      const key = transferKey(context.peerId, metadata);
+      removeTransferNotice(key);
+      try {
+        const buffer = await dataToArrayBuffer(data);
+        const mime = String(metadata.mime || metadata.type || 'application/octet-stream');
+        const blob = new Blob([buffer], { type: mime });
+        if (blob.size > MAX_FILE_SIZE) throw new Error('文件超过 64 MB 限制');
+        const record = {
+          id: String(metadata.transferId || makeId()),
+          type: 'file',
+          name: String(metadata.name || 'download'),
+          mime,
+          size: Number(metadata.size) || blob.size,
+          blob,
+          time: Number(metadata.time) || Date.now(),
+          mine: false
+        };
+        await saveRecord(record);
+        renderMessage(record);
+      } catch (error) {
+        showToast('文件接收失败：' + error.message);
+      }
+    };
+  }
+
+  async function loadTrystero() {
+    let lastError;
+    for (const url of TRYSTERO_URLS) {
+      try {
+        const module = await import(url);
+        if (typeof module.joinRoom === 'function') return module;
+        throw new Error('模块中没有找到 joinRoom');
+      } catch (error) {
+        lastError = error;
       }
     }
+    throw lastError || new Error('无法加载 Trystero');
   }
 
-  async function handleEvent(event) {
-    if (event.type === 'system') {
-      const record = { id: event.id || makeId(), type: 'system', text: event.text || '', time: event.time || Date.now() };
-      await saveRecord(record);
-      renderMessage(record);
-      return;
-    }
-    if (event.type === 'text') {
-      const record = {
-        id: event.id, type: 'text', name: event.name, text: event.text,
-        time: event.time || Date.now(), mine: false
-      };
-      await saveRecord(record);
-      renderMessage(record);
-      return;
-    }
-    if (event.type === 'file_start') {
-      const transferState = {
-        meta: event,
-        chunks: new Array(Number(event.chunks)),
-        received: 0,
-        cleanupTimer: null
-      };
-      transferState.cleanupTimer = setTimeout(() => {
-        if (transfers.has(event.transfer)) {
-          transfers.delete(event.transfer);
-          removeTransferNotice(event.transfer);
-          showToast('文件接收超时：' + event.name);
-        }
-      }, 5 * 60 * 1000);
-      transfers.set(event.transfer, transferState);
-      addTransferNotice(event.transfer, event.name, 0, Number(event.chunks));
-      return;
-    }
-    if (event.type === 'file_chunk') {
-      const transfer = transfers.get(event.transfer);
-      if (!transfer || transfer.chunks[event.index]) return;
-      const binary = atob(event.data);
-      const bytes = new Uint8Array(binary.length);
-      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-      transfer.chunks[event.index] = bytes;
-      transfer.received++;
-      updateTransferNotice(event.transfer, transfer.received, transfer.chunks.length);
-      return;
-    }
-    if (event.type === 'file_end') {
-      const transfer = transfers.get(event.transfer);
-      if (!transfer) return;
-      transfers.delete(event.transfer);
-      clearTimeout(transfer.cleanupTimer);
-      removeTransferNotice(event.transfer);
-      if (transfer.received !== transfer.chunks.length || transfer.chunks.some((chunk) => !chunk)) {
-        showToast('文件传输不完整：' + transfer.meta.name);
-        return;
+  async function connectP2P() {
+    const trystero = await loadTrystero();
+
+    const id = String(trystero.selfId || makeId());
+    nickname = 'Guest-' + id.slice(0, 5).toUpperCase();
+    ui.avatar.textContent = firstLetter(nickname);
+
+    room = trystero.joinRoom({
+      appId: APP_ID,
+      maxReceiveBytes: MAX_RECEIVE_BYTES
+    }, ROOM_ID, {
+      onJoinError: (details) => {
+        const message = details && details.error && details.error.message
+          ? details.error.message
+          : '无法建立 P2P 连接';
+        if (details && details.peerId) peerIds.delete(details.peerId);
+        refreshConnection();
+        showToast('P2P 连接失败：' + message);
       }
-      const meta = transfer.meta;
-      const blob = new Blob(transfer.chunks, { type: meta.mime || 'application/octet-stream' });
-      const record = {
-        id: event.transfer, type: 'file', name: meta.name, mime: meta.mime,
-        size: meta.size, blob, time: meta.time || Date.now(), mine: false
-      };
-      await saveRecord(record);
-      renderMessage(record);
-    }
-  }
+    });
 
-  function addTransferNotice(id, name, received, total) {
-    const notice = document.createElement('div');
-    notice.className = 'transfer-notice';
-    notice.id = 'transfer-' + id;
-    notice.textContent = (name || '文件') + ' 正在接收 ' + received + '/' + total;
-    const progress = document.createElement('progress');
-    progress.max = total || 1;
-    progress.value = received;
-    notice.appendChild(progress);
-    ui.feed.appendChild(notice);
-    ui.welcome.hidden = true;
-    scrollToBottom();
-  }
+    setupActions();
+    roomReady = true;
 
-  function updateTransferNotice(id, received, total) {
-    const notice = $('transfer-' + id);
-    if (!notice) return;
-    const progress = notice.querySelector('progress');
-    if (progress) progress.value = received;
-    notice.firstChild.textContent = notice.firstChild.textContent.replace(/\s+正在接收\s+\d+\/\d+$/, ' 正在接收 ' + received + '/' + total);
-  }
+    room.onPeerJoin = (peerId) => {
+      peerIds.add(peerId);
+      peerNames.set(peerId, peerNames.get(peerId) || 'Guest');
+      updateOnlineMembers();
+      refreshConnection();
+      profileAction.send({ name: nickname }, { target: peerId });
+    };
 
-  function removeTransferNotice(id) {
-    const notice = $('transfer-' + id);
-    if (notice) notice.remove();
+    room.onPeerLeave = (peerId) => {
+      peerIds.delete(peerId);
+      peerNames.delete(peerId);
+      updateOnlineMembers();
+      refreshConnection();
+    };
+
+    refreshConnection();
   }
 
   async function sendText() {
     const text = ui.input.value.trim();
-    if (!text || !connected) return;
+    if (!text || !connected || !messageAction) return;
     ui.send.disabled = true;
     try {
-      const id = makeId();
-      const response = await postForm('/api/message', { client: clientId, message: id, text });
-      const record = { id, type: 'text', name: nickname, text, time: response.time || Date.now(), mine: true };
+      const record = {
+        id: makeId(),
+        type: 'text',
+        name: nickname,
+        text,
+        time: Date.now(),
+        mine: true
+      };
+      await messageAction.send({
+        id: record.id,
+        name: record.name,
+        text: record.text,
+        time: record.time
+      });
       await saveRecord(record);
       renderMessage(record);
       ui.input.value = '';
@@ -390,79 +424,58 @@
   }
 
   async function sendFile(file) {
-    if (!connected) throw new Error('当前未连接');
+    if (!connected || !fileAction) throw new Error('当前没有 P2P 对端');
     if (file.size <= 0) throw new Error('不能发送空文件');
     if (file.size > MAX_FILE_SIZE) throw new Error('文件超过 64 MB 限制');
-    if (onlineMembers.filter((member) => member.id !== clientId).length === 0) {
-      throw new Error('目前没有其他在线成员');
-    }
+    if (peerIds.size === 0) throw new Error('目前没有其他在线成员');
 
     const transferId = makeId();
-    const chunks = Math.ceil(file.size / CHUNK_SIZE);
     const mime = file.type || 'application/octet-stream';
-    await postForm('/api/file/start', {
-      client: clientId, transfer: transferId, name: file.name,
-      mime, size: file.size, chunks
-    });
+    const progressByPeer = new Map(Array.from(peerIds, (peerId) => [peerId, 0]));
 
     ui.uploadStatus.hidden = false;
     ui.uploadProgress.style.width = '0%';
-    ui.uploadLabel.textContent = '正在发送 ' + file.name;
+    ui.uploadLabel.textContent = '正在 P2P 发送 ' + file.name;
 
-    for (let index = 0; index < chunks; index++) {
-      const start = index * CHUNK_SIZE;
-      const buffer = await file.slice(start, Math.min(file.size, start + CHUNK_SIZE)).arrayBuffer();
-      const url = '/api/file/chunk?client=' + encodeURIComponent(clientId)
-        + '&transfer=' + encodeURIComponent(transferId) + '&index=' + index;
-      await retryChunk(url, buffer);
-      ui.uploadProgress.style.width = Math.round(((index + 1) / chunks) * 100) + '%';
-      ui.uploadLabel.textContent = '正在发送 ' + file.name + ' · ' + Math.round(((index + 1) / chunks) * 100) + '%';
-    }
+    await fileAction.send(file, {
+      metadata: {
+        transferId,
+        name: file.name,
+        mime,
+        size: file.size,
+        time: Date.now()
+      },
+      onProgress: (percent, context) => {
+        if (context && context.peerId) progressByPeer.set(context.peerId, percent);
+        const values = Array.from(progressByPeer.values());
+        const average = values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : percent;
+        const done = Math.round(average * 100);
+        ui.uploadProgress.style.width = done + '%';
+        ui.uploadLabel.textContent = '正在 P2P 发送 ' + file.name + ' · ' + done + '%';
+      }
+    });
 
-    await retryForm('/api/file/end', { client: clientId, transfer: transferId });
     const record = {
-      id: transferId, type: 'file', name: file.name, mime,
-      size: file.size, blob: file.slice(0, file.size, mime), time: Date.now(), mine: true
+      id: transferId,
+      type: 'file',
+      name: file.name,
+      mime,
+      size: file.size,
+      blob: file.slice(0, file.size, mime),
+      time: Date.now(),
+      mine: true
     };
     await saveRecord(record);
     renderMessage(record);
+    ui.uploadProgress.style.width = '100%';
+    ui.uploadLabel.textContent = 'P2P 发送完成：' + file.name;
+    await sleep(600);
     ui.uploadStatus.hidden = true;
   }
 
-  async function retryChunk(url, buffer) {
-    let lastError;
-    for (let attempt = 0; attempt < 40; attempt++) {
-      try {
-        const data = await api(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/octet-stream' },
-          body: buffer,
-          timeout: 30000
-        });
-        return data;
-      } catch (error) {
-        lastError = error;
-        if (error.status && error.status !== 429 && error.status < 500) throw error;
-        await sleep(Math.min(1500, 180 + attempt * 70));
-      }
-    }
-    throw lastError || new Error('文件分块发送失败');
+  function sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
-
-  async function retryForm(path, values) {
-    let lastError;
-    for (let attempt = 0; attempt < 20; attempt++) {
-      try { return await postForm(path, values); }
-      catch (error) {
-        lastError = error;
-        if (error.status && error.status !== 429 && error.status < 500) throw error;
-        await sleep(Math.min(1200, 200 + attempt * 60));
-      }
-    }
-    throw lastError || new Error('请求失败');
-  }
-
-  function sleep(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
 
   function resizeInput() {
     ui.input.style.height = 'auto';
@@ -483,8 +496,13 @@
     const files = Array.from(ui.fileInput.files || []);
     ui.fileInput.value = '';
     for (const file of files) {
-      try { await sendFile(file); }
-      catch (error) { ui.uploadStatus.hidden = true; showToast(file.name + '：' + error.message); break; }
+      try {
+        await sendFile(file);
+      } catch (error) {
+        ui.uploadStatus.hidden = true;
+        showToast(file.name + '：' + error.message);
+        break;
+      }
     }
   });
 
@@ -492,7 +510,9 @@
     if (!window.confirm('确定清空这台设备保存的全部聊天记录和文件吗？')) return;
     try {
       await databaseRequest('readwrite', (store) => store.clear());
+      renderedIds.clear();
       ui.feed.querySelectorAll('.message-row,.system-message,.transfer-notice').forEach((node) => node.remove());
+      transferNotices.clear();
       ui.welcome.hidden = false;
       showToast('本机聊天记录已清空');
     } catch (error) {
@@ -507,10 +527,25 @@
       showToast('本地记录功能不可用：' + error.message);
     }
 
-    setConnection(false, '正在加入公共群聊…');
-    pollLoop();
+    setConnection(false, '正在加载 P2P 模块…');
+    while (!room) {
+      try {
+        await connectP2P();
+      } catch (error) {
+        roomReady = false;
+        setConnection(false, 'P2P 初始化失败，正在重试…');
+        showToast('P2P 初始化失败：' + error.message);
+        await sleep(5000);
+      }
+    }
   }
 
-  window.addEventListener('beforeunload', () => { polling = false; });
+  window.addEventListener('online', () => {
+    if (!roomReady) setConnection(false, '网络已恢复，正在连接…');
+  });
+  window.addEventListener('beforeunload', () => {
+    if (room && typeof room.leave === 'function') room.leave();
+  });
+
   initialize();
 })();
